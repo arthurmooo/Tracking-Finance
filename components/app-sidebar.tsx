@@ -47,9 +47,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 // Sample data for the sidebar
 const data = {
     user: {
-        name: "Arthur",
-        email: "arthur@example.com",
-        avatar: "/avatars/arthur.jpg",
+        name: "User",
+        email: "user@example.com",
+        avatar: "",
     },
     navMain: [
         {

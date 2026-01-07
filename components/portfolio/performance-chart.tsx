@@ -23,61 +23,11 @@ import {
 } from "@/components/ui/dialog"
 import { TimeRange, ViewMode } from "./stocks-funds-view"
 
-// Generate daily data for chart
-const generateChartData = () => {
-    const data = []
-    const today = new Date()
-    let value = 11500
+// Removed mock chart data generation
 
-    // Benchmarks
-    let sp500 = 10000
-    let livreta = 10000
-    let bitcoin = 10000
+const allData: any[] = [] // Default empty if no props
 
-    for (let i = 730; i >= 0; i--) {
-        const date = new Date(today)
-        date.setDate(date.getDate() - i)
-
-        // Random walk for portfolio
-        const dailyVol = (Math.random() - 0.45) * 50
-        value += dailyVol
-
-        // OHLC for portfolio (simulated)
-        const open = value - dailyVol / 2
-        const close = value
-        // High/Low
-        const high = Math.max(open, close) + Math.random() * 20
-        const low = Math.min(open, close) - Math.random() * 20
-
-        // S&P 500: ~10% annual + volatility
-        sp500 = sp500 * (1 + 0.00026) + (Math.random() - 0.45) * 40
-
-        // Livret A: 3% annual flat
-        livreta = livreta * (1 + 0.00008)
-
-        // Bitcoin: High Volatility
-        bitcoin = bitcoin * (1 + (Math.random() - 0.48) * 0.02) // huge swings
-
-        data.push({
-            date: date.toISOString().split('T')[0], // Use ISO format for consistency
-            value: Math.round(value),
-            open: Math.round(open),
-            high: Math.round(high),
-            low: Math.round(low),
-            close: Math.round(close),
-            sp500: Math.round(sp500),
-            livreta: Math.round(livreta),
-            bitcoin: Math.round(bitcoin),
-            // Color for candlestick up/down
-            color: close >= open ? "#10b981" : "#ef4444"
-        })
-    }
-    return data
-}
-
-const allData = generateChartData()
-
-function filterDataByRange(data: typeof allData, range: TimeRange) {
+function filterDataByRange(data: any[], range: TimeRange) {
     const currentYear = new Date().getFullYear().toString()
 
     switch (range) {
@@ -99,20 +49,21 @@ function filterDataByRange(data: typeof allData, range: TimeRange) {
 }
 
 interface PerformanceChartProps {
+    data?: { date: string; value: number }[]
     range: TimeRange
     viewMode: ViewMode
     benchmark?: string
     chartType?: "area" | "candlestick"
 }
 
-export function PerformanceChart({ range, viewMode, benchmark = "none", chartType = "area" }: PerformanceChartProps) {
+export function PerformanceChart({ data = [], range, viewMode, benchmark = "none", chartType = "area" }: PerformanceChartProps) {
     const [mounted, setMounted] = useState(false)
 
     useEffect(() => {
         setMounted(true)
     }, [])
 
-    const filteredData = useMemo(() => filterDataByRange(allData, range), [range])
+    const filteredData = useMemo(() => filterDataByRange(data, range), [data, range])
 
     // Calculate stats from filtered data
     const startValue = filteredData.length > 0 ? filteredData[0].value : 0

@@ -6,12 +6,20 @@ export default async function PortfolioPage() {
     const data = await getDashboardData()
 
     // --- Data Processing for Portfolio Summary ---
+    // Calculate REAL-TIME Net Worth from latest assets, not just snapshots history
+    const realTimeNetWorth = data.assets.reduce((sum: number, asset: any) => {
+        const qty = parseFloat(asset.quantity || '0')
+        const price = parseFloat(asset.currentPrice || asset.price || '0')
+        return sum + (qty * price)
+    }, 0)
+
     const snapshots = data.snapshots.map(s => ({
         date: s.date,
         value: parseFloat(s.totalNetWorth)
     }))
 
-    const currentNetWorth = snapshots.length > 0 ? snapshots[snapshots.length - 1].value : 0
+    // Use real-time value for the display, fallback to snapshot if empty (which shouldn't happen with real data)
+    const currentNetWorth = realTimeNetWorth || (snapshots.length > 0 ? snapshots[snapshots.length - 1].value : 0)
 
     // Calculate YTD P&L based on actual data
     const currentYear = new Date().getFullYear().toString()
@@ -36,8 +44,7 @@ export default async function PortfolioPage() {
         const price = parseFloat(rawAsset.currentPrice || rawAsset.price || '0')
         const value = quantity * price
 
-        // Mocking buy price for demo P&Ln if not present
-        const buyPrice = rawAsset.averageBuyPrice ? parseFloat(rawAsset.averageBuyPrice) : price * 0.95
+        const buyPrice = rawAsset.averageBuyPrice ? parseFloat(rawAsset.averageBuyPrice) : price
         const pnl = value - (quantity * buyPrice)
 
         assetsByPortfolio[portfolioId].push({

@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { FileUploadZone } from "@/components/import/file-upload-zone"
 import { CsvPreviewTable } from "@/components/import/csv-preview-table"
-import { Header } from "@/components/header" // Assuming this exists or similar
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
     Select,
@@ -20,9 +19,12 @@ import { useRouter } from "next/navigation"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useEffect } from "react"
 
+import { CreatePortfolioDialog } from "@/components/portfolio/create-portfolio-dialog"
+
 export default function ImportPage() {
     const router = useRouter()
     const [step, setStep] = useState(1);
+    const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [portfolios, setPortfolios] = useState<{ id: string, name: string }[]>([]);
     const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>("");
     const [parsedData, setParsedData] = useState<ParsedAsset[]>([]);
@@ -104,12 +106,25 @@ export default function ImportPage() {
                                     {portfolios.map(p => (
                                         <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                                     ))}
-                                    {/* Temporary manual option just in case */}
-                                    <SelectItem value="new">Create new standard portfolio...</SelectItem>
+                                    <SelectItem value="new_action" className="text-primary font-medium focus:text-primary">
+                                        + Create new portfolio
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
+
+                            <CreatePortfolioDialog
+                                onCreated={(newId) => {
+                                    // Refresh list
+                                    getPortfoliosList().then(res => {
+                                        if (res && res.success) setPortfolios(res.data);
+                                    });
+                                    if (newId) setSelectedPortfolioId(newId);
+                                }}
+                                trigger={<div id="create-trigger" className="hidden"></div>}
+                            />
+
                             <p className="text-xs text-muted-foreground mt-4">
-                                Tip: You can create new portfolios in the settings page.
+                                Tip: You can create new portfolios directly from the dropdown.
                             </p>
                         </CardContent>
                     </Card>

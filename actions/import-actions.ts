@@ -87,7 +87,29 @@ export async function getPortfoliosList() {
         });
         return { success: true, data: result };
     } catch (error) {
+    } catch (error) {
         console.error("Failed to fetch portfolios:", error);
         return { success: false, data: [] };
+    }
+}
+
+export async function createPortfolio(name: string, type: string) {
+    try {
+        const user = await db.query.profiles.findFirst();
+        if (!user) throw new Error("No user found");
+
+        const [portfolio] = await db.insert(db.query.portfolios.schema).values({
+            userId: user.id,
+            name: name,
+            type: type,
+        }).returning();
+
+        revalidatePath('/import');
+        revalidatePath('/portfolio');
+
+        return { success: true, data: portfolio };
+    } catch (error) {
+        console.error("Failed to create portfolio:", error);
+        return { success: false, error: "Failed to create portfolio" };
     }
 }

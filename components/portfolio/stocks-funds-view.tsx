@@ -11,9 +11,10 @@ interface StocksFundsViewProps {
     totalValue: number
     changeValue: number
     changePercentage: number
+    historyData?: { date: string; value: number }[]
 }
 
-export function StocksFundsView({ totalValue, changeValue, changePercentage }: StocksFundsViewProps) {
+export function StocksFundsView({ totalValue, changeValue, changePercentage, historyData }: StocksFundsViewProps) {
     const [selectedRange, setSelectedRange] = useState<TimeRange>("YTD")
     const [viewMode, setViewMode] = useState<ViewMode>("portfolio")
     const [benchmark, setBenchmark] = useState<string>("none")
@@ -35,6 +36,7 @@ export function StocksFundsView({ totalValue, changeValue, changePercentage }: S
                 onChartTypeChange={setChartType}
             />
             <PerformanceChart
+                data={historyData}
                 range={selectedRange}
                 viewMode={viewMode}
                 benchmark={benchmark}
