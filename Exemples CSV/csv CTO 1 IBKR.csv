@@ -1,0 +1,122 @@
+﻿Statement,Header,Nom champ,Valeur champ
+Statement,Data,BrokerName,Interactive Brokers Ireland Limited
+Statement,Data,BrokerAddress,
+Statement,Data,Title,Synthèse du réalisé
+Statement,Data,Period,"Janvier 6, 2026"
+Statement,Data,WhenGenerated,"2026-01-07, 17:21:30 EST"
+Informations du compte,Header,Nom champ,Valeur champ
+Informations du compte,Data,Nom,Arthur Mo
+Informations du compte,Data,Compte,U22209939
+Informations du compte,Data,Type de compte,Individuel
+Informations du compte,Data,Type de client,Individuel
+Informations du compte,Data,Capacités du compte,Cash
+Informations du compte,Data,Devise de base,EUR
+Actif net,Header,Classe d'actif,Total précédent,Actuel long,Actuel short,Total actuel,Variation
+Actif net,Data,Trésorerie,6.405821174,6.405821174,0,6.405821174,0
+Actif net,Data,Action,462.6811008,478.4663375,0,478.4663375,15.7852367
+Actif net,Data,Total,469.086921974,484.872158674,0,484.872158674,15.7852367
+Actif net,Header,Taux de rentabilité pondéré dans le temps
+Actif net,Data,3.365098441%
+Changements de l'actif net,Header,Nom champ,Valeur champ
+Changements de l'actif net,Data,Valeur de départ,469.086921974
+Changements de l'actif net,Data,Détails non disponibles,
+Changements de l'actif net,Data,Valeur en fin de période,484.872158674
+Synthèse de la performance réalisée et non-réalisée,Header,Catégorie d'actifs,Symbole,Aj. coût,Realisé Profit C/T,Realisé Perte C/T,Realisé Profit L/T,Realisé Perte L/T,Realisé Total,Non réalisé Profit C/T,Non réalisé Perte C/T,Non réalisé Profit L/T,Non réalisé Perte L/T,Non réalisé Total,Total,Code
+Synthèse de la performance réalisée et non-réalisée,Data,Actions,ASTS,0,0,0,0,0,0,5.640267275,-0.003516311,0,0,5.636750964,5.636750964,
+Synthèse de la performance réalisée et non-réalisée,Data,Actions,BKSY,0,0,0,0,0,0,0,-13.001761695,0,0,-13.001761695,-13.001761695,
+Synthèse de la performance réalisée et non-réalisée,Data,Actions,CCJ,0,0,0,0,0,0,10.575050586,0,0,0,10.575050586,10.575050586,
+Synthèse de la performance réalisée et non-réalisée,Data,Actions,COIN,0,0,0,0,0,0,0,-14.845625944,0,0,-14.845625944,-14.845625944,
+Synthèse de la performance réalisée et non-réalisée,Data,Actions,ESLT,0,0,0,0,0,0,9.107715603,0,0,0,9.107715603,9.107715603,
+Synthèse de la performance réalisée et non-réalisée,Data,Actions,META,0,0,0,0,0,0,0,-3.63572218,0,0,-3.63572218,-3.63572218,
+Synthèse de la performance réalisée et non-réalisée,Data,Actions,PLTR,0,0,0,0,0,0,0,-0.991662016,0,0,-0.991662016,-0.991662016,
+Synthèse de la performance réalisée et non-réalisée,Data,Actions,QCOM,0,0,0,0,0,0,4.268410816,0,0,0,4.268410816,4.268410816,
+Synthèse de la performance réalisée et non-réalisée,Data,Actions,QS,0,0,0,0,0,0,0,-13.073031576,0,0,-13.073031576,-13.073031576,
+Synthèse de la performance réalisée et non-réalisée,Data,Actions,RDW,0,0,0,0,0,0,3.131722808,-0.008481923,0,0,3.123240886,3.123240886,
+Synthèse de la performance réalisée et non-réalisée,Data,Total,,0,0,0,0,0,0,32.723167088,-45.559801644,0,0,-12.836634556,-12.836634556,
+Synthèse de la performance réalisée et non-réalisée,Data,Total (Tous les actifs),,0,0,0,0,0,0,32.723167088,-45.559801644,0,0,-12.836634556,-12.836634556,
+Positions ouvertes,Header,DataDiscriminator,Catégorie d'actifs,Devise,Symbole,Quantité,Mult,Coût,Coût d'acquisition,Cours de clôture,Valeur,P/L non réalisé,Code
+Positions ouvertes,Data,Summary,Actions,USD,ASTS,0.5855,1,86.236630231,50.491547,97.49,57.08,6.588453,
+Positions ouvertes,Data,Summary,Actions,USD,BKSY,2.2397,1,31.565371702,70.696963,24.78,55.5,-15.196963,
+Positions ouvertes,Data,Summary,Actions,USD,CCJ,0.9124,1,88.546110259,80.789471,102.09,93.15,12.360529,
+Positions ouvertes,Data,Summary,Actions,USD,COIN,0.1322,1,381.786255673,50.472143,250.56,33.12,-17.352143,
+Positions ouvertes,Data,Summary,Actions,USD,ESLT,0.0955,1,528.634020942,50.484549,640.07,61.13,10.645451,
+Positions ouvertes,Data,Summary,Actions,USD,META,0.0699,1,721.453118741,50.429573,660.62,46.18,-4.249573,
+Positions ouvertes,Data,Summary,Actions,USD,PLTR,0.2745,1,183.93112204,50.489093,179.71,49.33,-1.159093,
+Positions ouvertes,Data,Summary,Actions,USD,QCOM,0.3041,1,166.033923052,50.490916,182.45,55.48,4.989084,
+Positions ouvertes,Data,Summary,Actions,USD,QS,3,1,16.403422,49.210266,11.31,33.93,-15.280266,
+Positions ouvertes,Data,Summary,Actions,USD,RDW,6.9876,1,10.117842321,70.699435,10.64,74.35,3.650565,
+Positions ouvertes,Total,,Actions,USD,,,,,574.253956,,559.25,-15.003956,
+Positions ouvertes,Total,,Actions,EUR,,,,,491.302972056,,478.4663375,-12.836634556,
+Codes,Header,Code,Signification,Code (Cont.),Signification (Cont.)
+Codes,Data,A,Assignation
+Codes,Data,ADR,Accumuluation de frais ADR
+Codes,Data,AEx,Exercice automatique pour les recommandations liées aux dividendes.
+Codes,Data,AFx,AutoFX conversion resulting from trading
+Codes,Data,Adj,Ajustement
+Codes,Data,Al,Allocation
+Codes,Data,Aw,Transaction éxécutée à l'externe
+Codes,Data,B,Rachat automatique
+Codes,Data,Bo,Emprunt direct
+Codes,Data,C,Fermeture de position
+Codes,Data,CD,Livraison espèces
+Codes,Data,CP,Position complexe
+Codes,Data,Ca,Annulé
+Codes,Data,Co,Transaction corrigée
+Codes,Data,Cx,"Une partie ou la totalité de cette transaction a été exécutée comme une opération de crossing menée par IB en qualité d'agent pour les deux contreparties, qui sont des clients IB."
+Codes,Data,DT,Discounted Trade
+Codes,Data,De,Delivery or Conversion Action
+Codes,Data,ETF,Création ou sortie d'ETF
+Codes,Data,Ep,Résulte d'une position ayant expiré
+Codes,Data,Ex,Exercice
+Codes,Data,FP,The fractional portion of this trade was executed against IB or an affiliate.
+Codes,Data,FPA,The fractional portion of this trade was executed against IB or an affiliate. IB acted as agent for the whole share portion of this trade.
+Codes,Data,G,Trader sur le segment de compte garanti
+Codes,Data,GEA,Exercice ou attribution résultant de la compensation de positions
+Codes,Data,HC,Choix de l'assiette imposable sur les coûts les plus élevés
+Codes,Data,HFI,Investissement transféré vers un Hedge Fund
+Codes,Data,HFR,Remboursement Hedge Fund
+Codes,Data,I,Transfert interne
+Codes,Data,IA,The transaction was executed against IB or an affiliate
+Codes,Data,IM,A portion of the order was executed against IB or an affiliate; IB acted as agent on a portion.
+Codes,Data,INV,Transfert d'investissement en provenance de l'investisseur
+Codes,Data,IPO,Cette transaction a été exécutée dans le cadre d'une introduction en Bourse dans laquelle IB faisait partie du groupe vendeur et est considérée comme une transaction principale.
+Codes,Data,L,Effectuée par IB (Violation de marge)
+Codes,Data,LD,Ajusté pour perte non admissible de vente fictive
+Codes,Data,LF,Liquidation of fractional position by IB
+Codes,Data,LI,"Dernier Entré, Premier Sorti (LIFO)"
+Codes,Data,LT,P/L à long terme
+Codes,Data,Lo,Prêt direct
+Codes,Data,M,Entrée manuelle par IB
+Codes,Data,MEx,Exercice manuel pour les recommandations liées aux dividendes.
+Codes,Data,ML,Maximiser les pertes à des fins d'imposition
+Codes,Data,MLG,Choix de la méthode d'imposition Augmentation des gains à long terme
+Codes,Data,MLL,Choix de la méthode d'imposition Augmentation des pertes à long terme
+Codes,Data,MSG,Choix de la méthode d'imposition Augmentation des gains à court terme
+Codes,Data,MSL,Choix de la méthode d'imposition Augmentation des pertes à court terme
+Codes,Data,O,Ouverture de position
+Codes,Data,Off,Yes and No contracts offset to $1.00 cash settlement
+Codes,Data,P,Exécution partielle
+Codes,Data,PE,Perpetual Investment
+Codes,Data,PI,Amélioration de prix
+Codes,Data,PTA,Post Trade Allocation
+Codes,Data,Po,Ajout à intérêts ou dividendes accumulés
+Codes,Data,Pr,Une partie ou la totalité de cette transaction a été exécutée par la Bourse comme une opération de crossing menée par IB auprès d'une filiale IB. IB est donc considéré comme donneur d'ordre pour la transaction et non comme agent.
+Codes,Data,R,Réinvestissement des dividendes
+Codes,Data,RED,Remboursement à l'investisseur
+Codes,Data,RI,Investissement récurrent
+Codes,Data,RP,"IB a git en tant qu'agent pour la partie en fractions d'actions de cette transaction, qui a été exécutée par une société affiliée d'IB en tant qu'opérateur de capital sans risque."
+Codes,Data,RPA,IB a agit en tant qu'agent pour le partie en fractions d'actions et la partie en actions entières de cette transaction ; la partie en fractions d'actions a été exécutée par une société affiliée d'IB en tant qu'opérateur de capital sans risque.
+Codes,Data,Rb,Rebill
+Codes,Data,Re,Extourne des intérêts ou dividendes cumulés
+Codes,Data,Ri,Remboursement
+Codes,Data,S0,Contract settled to zero value
+Codes,Data,S1,Contract settled to $1.00
+Codes,Data,SF,Trade is subject to IBKR Lite Surcharge Fee if volume of such trades exceeds 10% of the total monthly Lite trade volume
+Codes,Data,SI,Cet ordre a été sollicité par Interactive Brokers.
+Codes,Data,SL,Choix de l'unité pour le récapitulatif fiscal
+Codes,Data,SO,Cet ordre a été marqué comme sollicité par votre courtier introducteur.
+Codes,Data,SS,"Le client a demandé un règlement anticipé pour cet ordre, qui sera donc exécuté à un prix supérieur au cours actuel."
+Codes,Data,ST,P/L à court terme
+Codes,Data,T,Transfert
+Codes,Data,Un,"Actions dont les droits ne sont pas acquis, du programme d'attribution d'actions"
+Codes,Data,XCH,Mutual Fund Exchange Transaction

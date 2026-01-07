@@ -1,0 +1,129 @@
+import { getDashboardData } from "@/actions/dashboard"
+import { PortfolioSummary } from "@/components/portfolio/portfolio-summary"
+import { AssetsBreakdown, AssetCategory, PortfolioGroup, Asset } from "@/components/portfolio/assets-breakdown"
+
+export default async function PortfolioPage() {
+    const data = await getDashboardData()
+
+    // --- Data Processing for Portfolio Summary ---
+    const snapshots = data.snapshots.map(s => ({
+        date: s.date,
+        value: parseFloat(s.totalNetWorth)
+    }))
+
+    const currentNetWorth = snapshots.length > 0 ? snapshots[snapshots.length - 1].value : 0
+
+    // Calculate YTD P&L based on actual data
+    const currentYear = new Date().getFullYear().toString()
+    const startOfYearSnapshot = snapshots.find(s => s.date.startsWith(currentYear)) || snapshots[0]
+    const startOfYearValue = startOfYearSnapshot ? startOfYearSnapshot.value : currentNetWorth * 0.98
+    const ytdPnl = currentNetWorth - startOfYearValue
+    const ytdPnlPercent = startOfYearValue !== 0 ? (ytdPnl / startOfYearValue) * 100 : 0
+
+
+    // --- Data Processing for Assets Breakdown ---
+
+    // 1. Group Assets by Portfolio
+    const assetsByPortfolio: Record<string, Asset[]> = {}
+
+    data.assets.forEach((rawAsset: any) => {
+        const portfolioId = rawAsset.portfolioId || 'unknown'
+        if (!assetsByPortfolio[portfolioId]) {
+            assetsByPortfolio[portfolioId] = []
+        }
+
+        const quantity = parseFloat(rawAsset.quantity)
+        const price = parseFloat(rawAsset.currentPrice || rawAsset.price || '0')
+        const value = quantity * price
+
+        // Mocking buy price for demo P&Ln if not present
+        const buyPrice = rawAsset.averageBuyPrice ? parseFloat(rawAsset.averageBuyPrice) : price * 0.95
+        const pnl = value - (quantity * buyPrice)
+
+        assetsByPortfolio[portfolioId].push({
+            id: rawAsset.id || rawAsset.name,
+            name: rawAsset.name,
+            symbol: rawAsset.symbol,
+            quantity,
+            price,
+            value,
+            portfolioId,
+            type: rawAsset.type,
+            // @ts-ignore - Adding pnl to asset for aggregation, though not in interface explicitly yet
+            pnl,
+            pnlPercent: (pnl / (quantity * buyPrice)) * 100
+        })
+    })
+
+    // 2. Build Portfolio Groups
+    const portfolios = data.portfolios.map((p: any) => {
+        const pAssets = assetsByPortfolio[p.id] || []
+        const totalValue = pAssets.reduce((sum, a) => sum + a.value, 0)
+        // @ts-ignore
+        const totalPnl = pAssets.reduce((sum, a) => sum + a.pnl, 0)
+        const totalCost = totalValue - totalPnl
+        const pnlPercent = totalCost !== 0 ? (totalPnl / totalCost) * 100 : 0
+
+        return {
+            id: p.id,
+            name: p.name,
+            type: p.type, // PEA, CTO, CRYPTO, etc.
+            totalValue,
+            pnl: totalPnl,
+            pnlPercent,
+            assets: pAssets
+        } as PortfolioGroup & { type: string }
+    })
+
+    // 3. Group Portfolios into Categories
+    const categoryMap: Record<string, AssetCategory> = {
+        'stocks': { id: 'stocks', name: 'Stocks & Funds', totalValue: 0, percentage: 0, pnl: 0, pnlPercent: 0, portfolios: [] },
+        'crypto': { id: 'crypto', name: 'Cryptos', totalValue: 0, percentage: 0, pnl: 0, pnlPercent: 0, portfolios: [] },
+        'cash': { id: 'cash', name: 'Checking accounts', totalValue: 0, percentage: 0, pnl: 0, pnlPercent: 0, portfolios: [] },
+        'real_estate': { id: 'real_estate', name: 'Real Estate', totalValue: 0, percentage: 0, pnl: 0, pnlPercent: 0, portfolios: [] },
+    }
+
+    portfolios.forEach(p => {
+        let catKey = 'stocks'
+        const type = p.type?.toUpperCase()
+        if (type === 'CRYPTO') catKey = 'crypto'
+        else if (type === 'CASH' || type === 'BANK') catKey = 'cash'
+        else if (type === 'REAL_ESTATE' || type === 'SCPI') catKey = 'real_estate'
+        // PEA, CTO, PEE default to stocks
+
+        categoryMap[catKey].portfolios.push(p)
+        categoryMap[catKey].totalValue += p.totalValue
+        categoryMap[catKey].pnl += p.pnl
+    })
+
+    // 4. Finalize Categories
+    const totalAssetsValue = Object.values(categoryMap).reduce((sum, c) => sum + c.totalValue, 0)
+
+    const categories = Object.values(categoryMap)
+        .filter(c => c.totalValue > 0 || c.portfolios.length > 0)
+        .map(c => {
+            const cost = c.totalValue - c.pnl
+            return {
+                ...c,
+                percentage: totalAssetsValue > 0 ? Math.round((c.totalValue / totalAssetsValue) * 100) : 0,
+                pnlPercent: cost > 0 ? (c.pnl / cost) * 100 : 0
+            }
+        })
+        .sort((a, b) => b.totalValue - a.totalValue)
+
+
+    return (
+        <div className="flex flex-1 flex-col gap-4 p-4">
+            <PortfolioSummary
+                totalWorth={currentNetWorth}
+                snapshots={snapshots}
+                ytdPnl={ytdPnl}
+                ytdPnlPercent={ytdPnlPercent}
+            />
+
+            <AssetsBreakdown
+                categories={categories}
+            />
+        </div>
+    )
+}
