@@ -14,6 +14,12 @@ interface InsightsSectionProps {
     dividendYield: number
     projected12mDividends: number
     geographicBreakdown: GeographicBreakdownItem[]
+    // New props supported by getInsightsData
+    sectorBreakdown?: any[]
+    sectorScore?: number
+    sectorStatus?: string
+    geoScore?: number
+    geoStatus?: string
 }
 
 export function InsightsSection({
@@ -22,7 +28,12 @@ export function InsightsSection({
     feeStatus,
     dividendYield,
     projected12mDividends,
-    geographicBreakdown
+    geographicBreakdown,
+    sectorBreakdown = [],
+    sectorScore = 0,
+    sectorStatus = 'Average',
+    geoScore = 0,
+    geoStatus = 'Average'
 }: InsightsSectionProps) {
     // Sort and take top 4 regions for display
     const topRegions = geographicBreakdown.slice(0, 4)
@@ -73,24 +84,27 @@ export function InsightsSection({
                     </h4>
 
                     <div className="space-y-4">
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Sector Score</span>
+                            <span className="font-medium">{sectorScore}/10</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Geo Score</span>
+                            <span className="font-medium">{geoScore}/10</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Top Regions</span>
+                        </div>
                         {topRegions.length > 0 ? topRegions.map((item, index) => (
-                            <div key={item.region} className="flex items-center justify-between text-sm">
+                            <div key={item.region} className="flex items-center justify-between text-sm pl-2">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-muted-foreground">{item.percent}%</span>
+                                    <div className="w-2 h-2 rounded-full bg-blue-500" />
                                     <span>{item.region}</span>
                                 </div>
-                                <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-amber-200/80 rounded-full"
-                                        style={{
-                                            width: `${item.percent}%`,
-                                            opacity: 1 - (index * 0.2)
-                                        }}
-                                    />
-                                </div>
+                                <span className="font-medium">{item.percent.toFixed(0)}%</span>
                             </div>
                         )) : (
-                            <p className="text-sm text-muted-foreground">No data available</p>
+                            <div className="text-sm text-muted-foreground">No data available</div>
                         )}
                     </div>
                 </Card>

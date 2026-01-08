@@ -4,7 +4,9 @@ import { asc, eq, sql } from "drizzle-orm"
 import {
     calculateGeographicDiversification,
     calculateSectorDiversification,
-    calculateDiversificationScore
+    calculateDiversificationScore,
+    getProductFee,
+    PLATFORM_FEES
 } from "@/lib/asset-mappings"
 
 export async function getDashboardData() {
@@ -64,14 +66,48 @@ export async function getInsightsData() {
         const totalStocksValue = assetsWithValue.reduce((sum, a) => sum + a.value, 0)
 
         // ===== FEE CALCULATIONS =====
+        // 1. Transaction Fees (Historical) - kept for reference but usually one-off
         const feeTransactions = transactionsData.filter(t => t.type === 'FEE')
-        const totalFees = feeTransactions.reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0)
-        const feePercent = totalStocksValue > 0 ? (Math.abs(totalFees) / totalStocksValue) * 100 : 0
+        // const totalHistoricalFees = feeTransactions.reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0) // Unused for annual metric
 
-        // Potential savings: Compare to average low-cost broker (0.1% per year typical)
-        const idealFeeRate = 0.001 // 0.1%
+        // 2. Annual Running Costs (TER + Platform Fees)
+        let annualRunningCosts = 0
+
+        // Product Fees (TER)
+        for (const asset of assetsWithValue) {
+            const ter = getProductFee(asset.symbol)
+            if (ter > 0) {
+                annualRunningCosts += asset.value * (ter / 100)
+            }
+        }
+
+        // Platform Fees (e.g. AV / PER management fees)
+        for (const portfolio of portfoliosData) {
+            if (!stockPortfolioIds.includes(portfolio.id)) continue;
+
+            const portfolioAssets = stockAssets.filter(a => a.portfolioId === portfolio.id)
+            const portfolioValue = portfolioAssets.reduce((sum, a) => sum + (parseFloat(a.quantity) * parseFloat(a.currentPrice || '0')), 0)
+
+            // Heuristic mapping of portfolio type to fee
+            let platformFeeRate = 0
+            const pType = portfolio.type.toUpperCase()
+            if (pType.includes('AV') || pType.includes('ASSURANCE')) platformFeeRate = PLATFORM_FEES['AV']
+            else if (pType.includes('PER')) platformFeeRate = PLATFORM_FEES['PER']
+            else if (pType.includes('PEA')) platformFeeRate = PLATFORM_FEES['PEA']
+            else if (pType.includes('CTO')) platformFeeRate = PLATFORM_FEES['CTO']
+
+            if (platformFeeRate > 0) {
+                annualRunningCosts += portfolioValue * (platformFeeRate / 100)
+            }
+        }
+
+        const totalFees = annualRunningCosts // Display annual running costs as the main metric
+        const feePercent = totalStocksValue > 0 ? (totalFees / totalStocksValue) * 100 : 0
+
+        // Potential savings: Compare to average low-cost broker (0.2% per year typical for clean ETF portfolio)
+        const idealFeeRate = 0.002 // 0.2%
         const idealFees = totalStocksValue * idealFeeRate
-        const potentialSavings = Math.max(0, Math.abs(totalFees) - idealFees)
+        const potentialSavings = Math.max(0, totalFees - idealFees)
 
         // Fee status rating
         let feeStatus: 'Great' | 'Good' | 'Average' | 'Insufficient' = 'Great'
@@ -83,15 +119,22 @@ export async function getInsightsData() {
         const dividendTransactions = transactionsData.filter(t => t.type === 'DIVIDEND')
         const totalDividends = dividendTransactions.reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0)
 
-        // Calculate dividend yield based on current holdings
-        const dividendYield = totalStocksValue > 0 ? (totalDividends / totalStocksValue) * 100 : 0
+        // Calculate projected annual dividends based on real-time yield from assets
+        let projected12mDividends = 0
+        for (const asset of assetsWithValue) {
+            const yieldPercent = parseFloat(stockAssets.find(a => a.symbol === asset.symbol)?.dividendYield || '0')
+            if (yieldPercent > 0) {
+                projected12mDividends += asset.value * yieldPercent
+            }
+        }
 
-        // Project 12 months dividends (simple projection based on last 12 months)
-        const oneYearAgo = new Date()
-        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
-        const recentDividends = dividendTransactions.filter(t => new Date(t.date) >= oneYearAgo)
-        const recentDividendsTotal = recentDividends.reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0)
-        const projected12mDividends = recentDividendsTotal || (totalStocksValue * (dividendYield / 100))
+        // Current Yield based on projection (more accurate than historical)
+        const dividendYield = totalStocksValue > 0 ? (projected12mDividends / totalStocksValue) * 100 : 0
+
+        // Only fallback to historical if projection is 0 but we have history (unlikely with this new logic)
+        if (projected12mDividends === 0 && totalDividends > 0) {
+            projected12mDividends = totalDividends
+        }
 
         // ===== DIVERSIFICATION CALCULATIONS =====
         const geographicBreakdown = calculateGeographicDiversification(assetsWithValue)

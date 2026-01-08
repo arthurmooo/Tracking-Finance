@@ -12,7 +12,7 @@ import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import { TimeRange, ViewMode } from "./stocks-funds-view"
 import { updateAllPrices } from "@/actions/price-actions"
-import { useTransition } from "react"
+import { useState, useEffect } from "react"
 import { RefreshCw } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -157,30 +157,42 @@ export function StocksFundsHeader({
 }
 
 function RefreshButton() {
-    const [isPending, startTransition] = useTransition()
-    const router = useRouter()
+    const [isLoading, setIsLoading] = useState(false);
+    const router = useRouter();
 
-    const handleRefresh = () => {
-        startTransition(async () => {
+    const handleRefresh = async () => {
+        if (isLoading) return; // Prevent double-clicks
+
+        setIsLoading(true);
+        try {
             const result = await updateAllPrices();
             if (result.success) {
                 console.log(`Updated ${result.updated} assets, failed ${result.failed}`);
             } else {
                 console.error(result.error);
             }
+        } catch (error) {
+            console.error('Error updating prices:', error);
+        } finally {
+            setIsLoading(false);
             // Force client-side refresh to reload server components with new data
             router.refresh();
-        });
+        }
     };
+
+    // Auto-update on mount
+    useEffect(() => {
+        handleRefresh();
+    }, []);
 
     return (
         <button
-            disabled={isPending}
+            disabled={isLoading}
             onClick={handleRefresh}
             className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 h-8 px-2"
         >
-            <RefreshCw className={cn("h-3.5 w-3.5", isPending && "animate-spin")} />
-            <span className="hidden md:inline">{isPending ? "Updating..." : "Refresh Prices"}</span>
+            <RefreshCw className={cn("h-3.5 w-3.5", isLoading && "animate-spin")} />
+            <span className="hidden md:inline">{isLoading ? "Updating..." : "Refresh Prices"}</span>
         </button>
     )
 }

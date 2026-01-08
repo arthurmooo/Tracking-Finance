@@ -61,10 +61,20 @@ export default async function StocksFundsPage() {
     const changeValue = 0
     const changePercentage = 0
 
-    const historyData = data.snapshots.map((s: any) => ({
-        date: s.date,
-        value: parseFloat(s.totalNetWorth)
-    }))
+    const historyData = data.snapshots.map((s: any) => {
+        let value = parseFloat(s.totalNetWorth)
+
+        // If we have granular data, use the 'stocks' component
+        // This prevents mixing Crowdfunding/Crypto values into the Stocks curve
+        if (s.data && typeof s.data === 'object' && 'stocks' in s.data) {
+            value = Number(s.data.stocks)
+        }
+
+        return {
+            date: s.date,
+            value
+        }
+    })
 
     return (
         <div className="p-6 md:p-8 space-y-8 pb-20">
@@ -81,6 +91,11 @@ export default async function StocksFundsPage() {
                 dividendYield={insights.dividendYield}
                 projected12mDividends={insights.projected12mDividends}
                 geographicBreakdown={insights.geographicBreakdown}
+                sectorBreakdown={insights.sectorBreakdown}
+                sectorScore={insights.sectorScore}
+                sectorStatus={insights.sectorStatus}
+                geoScore={insights.geoScore}
+                geoStatus={insights.geoStatus}
             />
             <AssetsTable accounts={accounts} />
         </div>

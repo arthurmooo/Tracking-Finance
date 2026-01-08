@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, decimal, varchar, date, integer } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, decimal, varchar, date, integer, jsonb } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 // Profiles: User settings and preferences
@@ -37,6 +37,7 @@ export const assets = pgTable('assets', {
     quantity: decimal('quantity').notNull(),
     averageBuyPrice: decimal('average_buy_price'),
     currentPrice: decimal('current_price'), // Cached latest price
+    dividendYield: decimal('dividend_yield'), // Cached yield from Yahoo Finance
     currency: varchar('currency', { length: 3 }).default('EUR').notNull(),
     type: varchar('type', { length: 20 }).notNull(), // STOCK, ETF, CASH, REAL_ESTATE
     createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -64,6 +65,7 @@ export const dailySnapshots = pgTable('daily_snapshots', {
     date: date('date').notNull(),
     totalNetWorth: decimal('total_net_worth').notNull(),
     currency: varchar('currency', { length: 3 }).default('EUR').notNull(),
+    data: jsonb('data'), // Stores breakdown e.g. { "stocks": 100, "crowdfunding": 50 }
     createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

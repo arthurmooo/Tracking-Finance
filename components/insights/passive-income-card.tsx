@@ -1,40 +1,52 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Bar, BarChart, ResponsiveContainer, Cell } from "recharts"
+import { Bar, BarChart, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts"
+import { Info } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface PassiveIncomeCardProps {
-    yieldVal: string
+    yieldPercent: number
     projectedAmount: number
-    data: { value: number }[]
 }
 
-export function PassiveIncomeCard({ yieldVal, projectedAmount, data }: PassiveIncomeCardProps) {
+export function PassiveIncomeCard({ yieldPercent, projectedAmount }: PassiveIncomeCardProps) {
+    // Generate mock monthly bars for visual effect based on projected amount
+    const data = Array.from({ length: 12 }, (_, i) => ({
+        value: projectedAmount / 12 * (0.8 + Math.random() * 0.4) // Random variation around average
+    }))
+
     return (
-        <Card className="bg-card/50 backdrop-blur-sm border-sidebar-border shadow-none overflow-hidden relative">
-            <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Passive income</CardTitle>
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    Passive income
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger>
+                                <Info className="h-4 w-4 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Includes estimated Dividends (based on current yield) <br /> + Projected Crowdlending Interest (Net 30%)</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="flex justify-between items-end">
-                    <div>
-                        <div className="text-2xl font-bold mb-1">{yieldVal}</div>
-                        <div className="text-xs text-muted-foreground mb-4">Yield (avg)</div>
-
-                        <div className="text-lg font-bold">
-                            €{projectedAmount.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                            <span className="text-2xl font-bold">{yieldPercent.toFixed(2)}%</span>
+                            <span className="text-xs text-muted-foreground">Yield (avg)</span>
                         </div>
-                        <div className="text-xs text-muted-foreground">Projected (12 months)</div>
+                        <div className="text-2xl font-bold">€{projectedAmount.toLocaleString()}</div>
+                        <span className="text-xs text-muted-foreground">Projected (12 months)</span>
                     </div>
-                    <div className="h-[80px] w-[140px]">
+                    <div className="h-[60px] w-[100px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={data}>
-                                <Bar dataKey="value" radius={[2, 2, 0, 0]}>
-                                    {data.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill="#3f3f46" />
-                                    ))}
-                                </Bar>
+                                <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>

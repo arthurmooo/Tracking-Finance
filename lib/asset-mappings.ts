@@ -109,6 +109,23 @@ export const TICKER_TO_REGION: Record<string, string> = {
     'EWY': 'Emerging Markets',
 }
 
+// ISIN to Region mappings (specific override for known ISINs)
+export const ISIN_TO_REGION: Record<string, string> = {
+    // Amundi PEA ETFs
+    'FR0013412269': 'United States', // US TECH
+    'FR0013412020': 'United States', // MSCI USA
+    'FR0010755611': 'United States', // USA LEVERAGED
+    'FR0011869320': 'Emerging Markets', // INDIA
+    'FR0013412012': 'Emerging Markets', // EMERGING ASIA
+    'FR0013411998': 'Europe', // EURO STOXX
+    'FR0007052782': 'Europe', // CAC 40
+    'FR0000120271': 'Europe', // TOTALENERGIES
+    'FR0000121972': 'Europe', // SCHNEIDER
+    'FR0000120578': 'Healthcare', // SANOFI (mapped in sector, region is Europe)
+    'FR0000121014': 'Europe', // LVMH
+    'FR0000120073': 'Europe', // AIR LIQUIDE
+}
+
 // Sector mappings
 export const TICKER_TO_SECTOR: Record<string, string> = {
     // Technology
@@ -127,6 +144,7 @@ export const TICKER_TO_SECTOR: Record<string, string> = {
     'ASML.AS': 'Technology',
     'SAP': 'Technology',
     'ORCL': 'Technology',
+    'FR0013412269': 'Technology', // US TECH ETF
 
     // Consumer Discretionary
     'AMZN': 'Consumer Discretionary',
@@ -142,6 +160,7 @@ export const TICKER_TO_SECTOR: Record<string, string> = {
     'DIS': 'Consumer Discretionary',
     'NFLX': 'Consumer Discretionary',
     'BKNG': 'Consumer Discretionary',
+    'FR0000121014': 'Consumer Discretionary', // LVMH ISIN
 
     // Consumer Staples
     'PG': 'Consumer Staples',
@@ -166,6 +185,7 @@ export const TICKER_TO_SECTOR: Record<string, string> = {
     'AZN': 'Healthcare',
     'GSK': 'Healthcare',
     'BAYN.DE': 'Healthcare',
+    'FR0000120578': 'Healthcare', // SANOFI ISIN
 
     // Financials
     'JPM': 'Financials',
@@ -186,6 +206,7 @@ export const TICKER_TO_SECTOR: Record<string, string> = {
     'TTE.PA': 'Energy',
     'SHEL': 'Energy',
     'BP': 'Energy',
+    'FR0000120271': 'Energy', // TOTALENERGIES ISIN
 
     // Industrials
     'AIR.PA': 'Industrials',
@@ -194,6 +215,8 @@ export const TICKER_TO_SECTOR: Record<string, string> = {
     'HON': 'Industrials',
     'UPS': 'Industrials',
     'SIE.DE': 'Industrials',
+    'FR0000121972': 'Industrials', // SCHNEIDER ISIN
+    'FR0000120073': 'Materials', // AIR LIQUIDE ISIN (often classified as Materials/Chemicals)
 
     // Materials
     'LIN': 'Materials',
@@ -234,22 +257,71 @@ export const TICKER_TO_SECTOR: Record<string, string> = {
     'IVV': 'Diversified',
 }
 
+// Product Fees (TER) Mapping (Annual %)
+export const TICKER_TO_FEES: Record<string, number> = {
+    // ETFs
+    'CW8': 0.38, 'CW8.PA': 0.38,
+    'MWRD': 0.38, 'MWRD.PA': 0.38,
+    'EWZ': 0.59,
+    'FR0013412269': 0.30, // Amundi US Tech
+    'FR0013412012': 0.20, // Amundi Emerging Asia
+    'FR0011869320': 0.85, // Amundi India
+    'FR0010755611': 0.35, // Amundi USA Leveraged
+    // Default for stocks is 0 (direct holding costs handled by platform fees)
+}
+
+// Platform Fees (Annual %) - Estimated defaults
+export const PLATFORM_FEES: Record<string, number> = {
+    'PEA': 0.0, // Usually 0 custody fees
+    'CTO': 0.0, // Usually 0 custody fees for neo-brokers
+    'AV': 0.60, // Assurance Vie typical management fee
+    'PER': 0.60, // PER typical management fee
+}
+
 /**
- * Get region for a ticker, with intelligent fallback
+ * Get product fee (TER) for a ticker
  */
-export function getRegion(symbol: string | null | undefined): string {
+export function getProductFee(symbol: string | null | undefined): number {
+    if (!symbol) return 0
+    const upper = symbol.toUpperCase()
+    if (TICKER_TO_FEES[upper] !== undefined) return TICKER_TO_FEES[upper]
+    // Check if it's an ETF (heuristic)
+    if (upper.includes('ETF') || upper.startsWith('FR')) return 0.20 // Default ETF assumption
+    return 0 // Stocks default to 0
+}
+
+/**
+ * Get region for a ticker/ISIN/Name, with intelligent fallback
+ */
+export function getRegion(symbol: string | null | undefined, name: string | null | undefined = null): string {
+    // 1. Name-based match (Priority if symbol is missing or generic)
+    if (name) {
+        const upName = name.toUpperCase()
+        if (upName.includes('USA') || upName.includes('AMERIQUE') || upName.includes('S&P 500') || upName.includes('NASDAQ')) return 'United States'
+        if (upName.includes('INDIA') || upName.includes('INDE')) return 'Emerging Markets'
+        if (upName.includes('EMERGING') || upName.includes('EMERGENTE')) return 'Emerging Markets'
+        if (upName.includes('CHINA') || upName.includes('CHINE')) return 'Asia'
+        if (upName.includes('ASIA') || upName.includes('ASIE')) return 'Asia'
+        if (upName.includes('JAPAN') || upName.includes('JAPON')) return 'Asia'
+        if (upName.includes('EUROPE') || upName.includes('EURO') || upName.includes('STOXX')) return 'Europe'
+        if (upName.includes('WORLD') || upName.includes('MONDE') || upName.includes('GLOBAL')) return 'World'
+    }
+
     if (!symbol) return 'Other'
 
-    // Try exact match first
     const upper = symbol.toUpperCase()
-    if (TICKER_TO_REGION[upper]) return TICKER_TO_REGION[upper]
-    if (TICKER_TO_REGION[symbol]) return TICKER_TO_REGION[symbol]
 
-    // Try without exchange suffix (e.g., "AAPL.PA" -> "AAPL")
+    // 2. ISIN match
+    if (ISIN_TO_REGION[upper]) return ISIN_TO_REGION[upper]
+
+    // 3. Ticker exact match
+    if (TICKER_TO_REGION[upper]) return TICKER_TO_REGION[upper]
+
+    // 4. Base ticker (without suffix)
     const baseTicker = upper.split('.')[0]
     if (TICKER_TO_REGION[baseTicker]) return TICKER_TO_REGION[baseTicker]
 
-    // Infer from exchange suffix
+    // 5. Exchange suffix inference
     if (symbol.includes('.PA') || symbol.includes('.AS') || symbol.includes('.DE') ||
         symbol.includes('.SW') || symbol.includes('.L')) {
         return 'Europe'
@@ -258,7 +330,14 @@ export function getRegion(symbol: string | null | undefined): string {
         return 'Asia'
     }
 
-    // Default to US for plain tickers (most common case)
+    // 6. ISIN Country Code Inference (if 12 chars length)
+    if (upper.length === 12) {
+        if (upper.startsWith('US')) return 'United States'
+        if (upper.startsWith('FR') || upper.startsWith('DE') || upper.startsWith('IE') || upper.startsWith('LU')) return 'Europe'
+        if (upper.startsWith('JP') || upper.startsWith('CN')) return 'Asia'
+    }
+
+    // 7. Standard US Ticker format
     if (/^[A-Z]{1,5}$/.test(upper)) {
         return 'United States'
     }
@@ -267,19 +346,35 @@ export function getRegion(symbol: string | null | undefined): string {
 }
 
 /**
- * Get sector for a ticker, with intelligent fallback
+ * Get sector for a ticker/ISIN/Name, with intelligent fallback
  */
-export function getSector(symbol: string | null | undefined): string {
+export function getSector(symbol: string | null | undefined, name: string | null | undefined = null): string {
+    // 1. Name-based match
+    if (name) {
+        const upName = name.toUpperCase()
+        if (upName.includes('TECH')) return 'Technology'
+        if (upName.includes('HEALTH') || upName.includes('SANTE') || upName.includes('ROBOT')) return 'Healthcare'
+        if (upName.includes('ENERGY') || upName.includes('ENERGIE') || upName.includes('OIL')) return 'Energy'
+        if (upName.includes('BANK') || upName.includes('BANQUE') || upName.includes('FINANCE')) return 'Financials'
+        if (upName.includes('ESTATE') || upName.includes('IMMOBILIER')) return 'Real Estate'
+        if (upName.includes('CONSUMER') || upName.includes('CONSOMMATION')) return 'Consumer Discretionary'
+    }
+
     if (!symbol) return 'Other'
 
-    // Try exact match first
     const upper = symbol.toUpperCase()
-    if (TICKER_TO_SECTOR[upper]) return TICKER_TO_SECTOR[upper]
-    if (TICKER_TO_SECTOR[symbol]) return TICKER_TO_SECTOR[symbol]
 
-    // Try without exchange suffix
+    // 2. Exact match (Ticker or ISIN)
+    if (TICKER_TO_SECTOR[upper]) return TICKER_TO_SECTOR[upper]
+
+    // 3. Base ticker
     const baseTicker = upper.split('.')[0]
     if (TICKER_TO_SECTOR[baseTicker]) return TICKER_TO_SECTOR[baseTicker]
+
+    // 4. ETF Logic (if diversified country/region ETF)
+    if (upper.startsWith('FR') || upper.includes('ETF')) {
+        return 'Diversified'
+    }
 
     return 'Other'
 }
@@ -288,7 +383,7 @@ export function getSector(symbol: string | null | undefined): string {
  * Calculate geographic diversification from assets
  */
 export function calculateGeographicDiversification(
-    assets: { symbol: string | null; value: number }[]
+    assets: { symbol: string | null; name?: string; value: number }[]
 ): { region: string; percent: number; value: number }[] {
     const totalValue = assets.reduce((sum, a) => sum + a.value, 0)
     if (totalValue === 0) return []
@@ -296,7 +391,7 @@ export function calculateGeographicDiversification(
     const byRegion: Record<string, number> = {}
 
     for (const asset of assets) {
-        const region = getRegion(asset.symbol)
+        const region = getRegion(asset.symbol, asset.name)
         byRegion[region] = (byRegion[region] || 0) + asset.value
     }
 
@@ -313,7 +408,7 @@ export function calculateGeographicDiversification(
  * Calculate sector diversification from assets
  */
 export function calculateSectorDiversification(
-    assets: { symbol: string | null; value: number }[]
+    assets: { symbol: string | null; name?: string; value: number }[]
 ): { sector: string; percent: number; value: number }[] {
     const totalValue = assets.reduce((sum, a) => sum + a.value, 0)
     if (totalValue === 0) return []
@@ -321,7 +416,7 @@ export function calculateSectorDiversification(
     const bySector: Record<string, number> = {}
 
     for (const asset of assets) {
-        const sector = getSector(asset.symbol)
+        const sector = getSector(asset.symbol, asset.name)
         bySector[sector] = (bySector[sector] || 0) + asset.value
     }
 

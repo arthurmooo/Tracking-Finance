@@ -29,9 +29,7 @@ export default async function InsightsPage() {
                 <ScannerCard
                     title="Fee Scanner"
                     score={`${insights.feePercent.toFixed(2)}%`}
-                    scoreLabel=""
-                    metric={`€${insights.potentialSavings.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}`}
-                    metricLabel="Potential savings"
+                    metric={`€${insights.potentialSavings.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} savings`}
                     status={insights.feeStatus}
                     color={insights.feeStatus === 'Great' || insights.feeStatus === 'Good' ? "#22c55e" :
                         insights.feeStatus === 'Average' ? "#f59e0b" : "#ef4444"}
@@ -39,35 +37,30 @@ export default async function InsightsPage() {
                 />
 
                 <PassiveIncomeCard
-                    yieldVal={`${insights.avgPassiveYield.toFixed(2)}%`}
+                    yieldPercent={insights.avgPassiveYield}
                     projectedAmount={insights.totalPassiveIncome}
-                    data={passiveIncomeChartData}
                 />
 
                 <ScannerCard
                     title="Sector diversification scanner"
                     score={`${insights.sectorScore}/10`}
-                    scoreLabel=""
-                    metric={insights.sectorStatus}
-                    metricLabel=""
                     status={insights.sectorStatus}
                     color={insights.sectorStatus === 'Advanced' || insights.sectorStatus === 'Great' ? "#3b82f6" :
                         insights.sectorStatus === 'Good' ? "#22c55e" :
                             insights.sectorStatus === 'Average' ? "#f59e0b" : "#ef4444"}
                     data={sectorChartData.length > 0 ? sectorChartData : [{ value: 30 }, { value: 50 }, { value: 40 }, { value: 70 }, { value: 50 }]}
+                    type="donut"
                 />
 
                 <ScannerCard
                     title="Geographical diversification scanner"
                     score={`${insights.geoScore}/10`}
-                    scoreLabel=""
-                    metric={insights.geoStatus}
-                    metricLabel=""
                     status={insights.geoStatus}
                     color={insights.geoStatus === 'Advanced' || insights.geoStatus === 'Great' ? "#3b82f6" :
                         insights.geoStatus === 'Good' ? "#22c55e" :
                             insights.geoStatus === 'Average' ? "#f59e0b" : "#ef4444"}
                     data={geoChartData.length > 0 ? geoChartData : [{ value: 80 }, { value: 20 }, { value: 10 }, { value: 5 }, { value: 5 }]}
+                    type="donut"
                 />
             </div>
 
