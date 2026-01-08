@@ -6,7 +6,7 @@ import { Bar, BarChart, ResponsiveContainer, Cell } from "recharts"
 
 interface PassiveIncomeCardProps {
     yieldVal: string
-    projectedAmount: string
+    projectedAmount: number
     data: { value: number }[]
 }
 
@@ -22,9 +22,10 @@ export function PassiveIncomeCard({ yieldVal, projectedAmount, data }: PassiveIn
                         <div className="text-2xl font-bold mb-1">{yieldVal}</div>
                         <div className="text-xs text-muted-foreground mb-4">Yield (avg)</div>
 
-                        {/* Revealed premium placeholder */}
-                        <div className="text-lg font-bold">€1,250</div>
-                        <div className="text-xs text-muted-foreground">{projectedAmount}</div>
+                        <div className="text-lg font-bold">
+                            €{projectedAmount.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Projected (12 months)</div>
                     </div>
                     <div className="h-[80px] w-[140px]">
                         <ResponsiveContainer width="100%" height="100%">

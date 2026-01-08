@@ -1,18 +1,20 @@
-import { getDashboardData } from "@/actions/dashboard"
+import { getDashboardData, getInsightsData } from "@/actions/dashboard"
 import { AssetsTable, Account, Asset } from "@/components/portfolio/assets-table"
 import { InsightsSection } from "@/components/portfolio/insights-section"
 import { StocksFundsView } from "@/components/portfolio/stocks-funds-view"
 
 export default async function StocksFundsPage() {
-    const data = await getDashboardData()
+    const [data, insights] = await Promise.all([
+        getDashboardData(),
+        getInsightsData()
+    ])
 
-    // Filter for Stocks & Funds (PEA, CTO, PEE, etc - basically everything except Crypto, Real Estate, Cash)
-    // Adjust logic based on your type definitions in DB vs UI
-    const stockPortfolioTypes = ['PEA', 'CTO', 'PEE', 'STOCK', 'FUND', 'ETF']
+    // Filter for Stocks & Funds (PEA, CTO, PEE, AV - basically everything except Crypto, Real Estate, Cash, Crowdfunding)
+    const stockPortfolioTypes = ['PEA', 'CTO', 'PEE', 'AV', 'STOCK', 'FUND', 'ETF']
 
     // Process assets into Accounts (Portfolios)
     const accounts: Account[] = data.portfolios
-        .filter((p: any) => stockPortfolioTypes.includes(p.type) || ['PEA', 'CTO', 'PEE'].includes(p.type))
+        .filter((p: any) => stockPortfolioTypes.includes(p.type))
         .map((p: any) => {
             const pAssets = data.assets.filter((a: any) => a.portfolioId === p.id)
 
@@ -72,7 +74,14 @@ export default async function StocksFundsPage() {
                 changePercentage={changePercentage}
                 historyData={historyData}
             />
-            <InsightsSection />
+            <InsightsSection
+                feePercent={insights.feePercent}
+                potentialSavings={insights.potentialSavings}
+                feeStatus={insights.feeStatus}
+                dividendYield={insights.dividendYield}
+                projected12mDividends={insights.projected12mDividends}
+                geographicBreakdown={insights.geographicBreakdown}
+            />
             <AssetsTable accounts={accounts} />
         </div>
     )

@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, decimal, varchar, date } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, decimal, varchar, date, integer } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 // Profiles: User settings and preferences
@@ -32,7 +32,7 @@ export const portfolios = pgTable('portfolios', {
 export const assets = pgTable('assets', {
     id: uuid('id').primaryKey().defaultRandom(),
     portfolioId: uuid('portfolio_id').references(() => portfolios.id).notNull(),
-    symbol: varchar('symbol', { length: 20 }), // Ticker (e.g., CW8.PA)
+    symbol: text('symbol'), // Ticker or metadata (JSON for crowdfunding)
     name: text('name').notNull(),
     quantity: decimal('quantity').notNull(),
     averageBuyPrice: decimal('average_buy_price'),

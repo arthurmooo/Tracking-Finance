@@ -83,20 +83,37 @@ export default async function PortfolioPage() {
     })
 
     // 3. Group Portfolios into Categories
+    // Categories are defined here - these map portfolio.type to display categories
     const categoryMap: Record<string, AssetCategory> = {
         'stocks': { id: 'stocks', name: 'Stocks & Funds', totalValue: 0, percentage: 0, pnl: 0, pnlPercent: 0, portfolios: [] },
         'crypto': { id: 'crypto', name: 'Cryptos', totalValue: 0, percentage: 0, pnl: 0, pnlPercent: 0, portfolios: [] },
         'cash': { id: 'cash', name: 'Checking accounts', totalValue: 0, percentage: 0, pnl: 0, pnlPercent: 0, portfolios: [] },
         'real_estate': { id: 'real_estate', name: 'Real Estate', totalValue: 0, percentage: 0, pnl: 0, pnlPercent: 0, portfolios: [] },
+        'crowdfunding': { id: 'crowdfunding', name: 'Participatory Financing', totalValue: 0, percentage: 0, pnl: 0, pnlPercent: 0, portfolios: [] },
+    }
+
+    // Map portfolio types to category keys
+    const typeToCategory: Record<string, string> = {
+        'PEA': 'stocks',
+        'CTO': 'stocks',
+        'PEE': 'stocks',
+        'AV': 'stocks',       // Assurance Vie goes to stocks & funds
+        'STOCK': 'stocks',
+        'ETF': 'stocks',
+        'FUND': 'stocks',
+        'CRYPTO': 'crypto',
+        'CASH': 'cash',
+        'BANK': 'cash',
+        'LIQUIDITY': 'cash',
+        'REAL_ESTATE': 'real_estate',
+        'SCPI': 'real_estate',
+        'CROWDFUNDING': 'crowdfunding',
+        'PARTICIPATORY': 'crowdfunding',
     }
 
     portfolios.forEach(p => {
-        let catKey = 'stocks'
-        const type = p.type?.toUpperCase()
-        if (type === 'CRYPTO') catKey = 'crypto'
-        else if (type === 'CASH' || type === 'BANK') catKey = 'cash'
-        else if (type === 'REAL_ESTATE' || type === 'SCPI') catKey = 'real_estate'
-        // PEA, CTO, PEE default to stocks
+        const type = p.type?.toUpperCase() || 'STOCKS'
+        const catKey = typeToCategory[type] || 'stocks' // Default to stocks if unknown
 
         categoryMap[catKey].portfolios.push(p)
         categoryMap[catKey].totalValue += p.totalValue

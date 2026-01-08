@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { FileUploadZone } from "@/components/import/file-upload-zone"
+import { ManualAssetForm } from "@/components/import/manual-asset-form"
 import { CsvPreviewTable } from "@/components/import/csv-preview-table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -12,7 +13,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { CheckCircle2, ChevronLeft, Loader2, AlertCircle } from "lucide-react"
+import { CheckCircle2, ChevronLeft, Loader2, AlertCircle, Plus } from "lucide-react"
 import { parseIbkrCsv, parseBienPreterCsv, parseGenericCsv, ParsedAsset, CsvParserResult } from "@/lib/csv-parsers"
 import { processImport, getPortfoliosList } from "@/actions/import-actions"
 import { useRouter } from "next/navigation"
@@ -20,6 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useEffect } from "react"
 
 import { CreatePortfolioDialog } from "@/components/portfolio/create-portfolio-dialog"
+import { DeletePortfolioButton } from "@/components/portfolio/delete-portfolio-button"
 
 export default function ImportPage() {
     const router = useRouter()
@@ -75,6 +77,13 @@ export default function ImportPage() {
         }
     }
 
+    const [importMode, setImportMode] = useState<'upload' | 'manual'>('upload');
+
+    const handleManualAdd = (asset: ParsedAsset) => {
+        setParsedData(prev => [...prev, asset]);
+        setStep(2);
+    }
+
     return (
         <div className="p-6 max-w-5xl mx-auto space-y-6">
             <div className="flex items-center gap-4">
@@ -85,7 +94,7 @@ export default function ImportPage() {
                 )}
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Import Data</h1>
-                    <p className="text-muted-foreground">Import your assets from CSV files (IBKR, generic, crowdfunding)</p>
+                    <p className="text-muted-foreground">Import your assets manually or from CSV files</p>
                 </div>
             </div>
 
@@ -98,52 +107,91 @@ export default function ImportPage() {
                             <CardDescription>Where should these assets go?</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <Select value={selectedPortfolioId} onValueChange={setSelectedPortfolioId}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a portfolio..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {portfolios.map(p => (
-                                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                    ))}
-                                    <SelectItem value="new_action" className="text-primary font-medium focus:text-primary">
-                                        + Create new portfolio
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <div className="flex gap-2">
+                                <Select value={selectedPortfolioId} onValueChange={setSelectedPortfolioId}>
+                                    <SelectTrigger className="flex-1">
+                                        <SelectValue placeholder="Select a portfolio..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {portfolios.map(p => (
+                                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
 
-                            <CreatePortfolioDialog
-                                onCreated={(newId) => {
-                                    // Refresh list
-                                    getPortfoliosList().then(res => {
-                                        if (res && res.success) setPortfolios(res.data);
-                                    });
-                                    if (newId) setSelectedPortfolioId(newId);
-                                }}
-                                trigger={<div id="create-trigger" className="hidden"></div>}
-                            />
+                                <CreatePortfolioDialog
+                                    onCreated={(newId) => {
+                                        getPortfoliosList().then(res => {
+                                            if (res && res.success) setPortfolios(res.data);
+                                        });
+                                        if (newId) setSelectedPortfolioId(newId);
+                                    }}
+                                    trigger={
+                                        <Button variant="outline" size="icon" title="Create new portfolio">
+                                            <Plus className="h-4 w-4" />
+                                        </Button>
+                                    }
+                                />
+
+                                {selectedPortfolioId && (
+                                    <DeletePortfolioButton
+                                        portfolioId={selectedPortfolioId}
+                                        portfolioName={portfolios.find(p => p.id === selectedPortfolioId)?.name || ''}
+                                        onDeleted={() => {
+                                            setSelectedPortfolioId('');
+                                            getPortfoliosList().then(res => {
+                                                if (res && res.success) setPortfolios(res.data);
+                                            });
+                                        }}
+                                    />
+                                )}
+                            </div>
 
                             <p className="text-xs text-muted-foreground mt-4">
-                                Tip: You can create new portfolios directly from the dropdown.
+                                Tip: Select a portfolio, then use the trash icon to delete it and all its assets.
                             </p>
                         </CardContent>
                     </Card>
 
                     <Card className={selectedPortfolioId ? "" : "opacity-50 pointer-events-none"}>
                         <CardHeader>
-                            <CardTitle>2. Upload CSV</CardTitle>
-                            <CardDescription>Drag and drop your file</CardDescription>
+                            <div className="flex items-center justify-between">
+                                <CardTitle>2. Add Assets</CardTitle>
+                                <div className="flex bg-muted rounded-lg p-1">
+                                    <button
+                                        onClick={() => setImportMode('upload')}
+                                        className={`px-3 py-1 text-sm rounded-md transition-all ${importMode === 'upload' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                                    >
+                                        CSV File
+                                    </button>
+                                    <button
+                                        onClick={() => setImportMode('manual')}
+                                        className={`px-3 py-1 text-sm rounded-md transition-all ${importMode === 'manual' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                                    >
+                                        Manual
+                                    </button>
+                                </div>
+                            </div>
+                            <CardDescription>
+                                {importMode === 'upload' ? 'Drag and drop your file' : 'Enter asset details manually'}
+                            </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <FileUploadZone onFileSelect={handleFileSelect} />
-                            {errors.length > 0 && (
-                                <Alert variant="destructive" className="mt-4">
-                                    <AlertCircle className="h-4 w-4" />
-                                    <AlertTitle>Error parsing file</AlertTitle>
-                                    <AlertDescription>
-                                        {errors.slice(0, 3).map((e, i) => <div key={i}>{e}</div>)}
-                                    </AlertDescription>
-                                </Alert>
+                            {importMode === 'upload' ? (
+                                <>
+                                    <FileUploadZone onFileSelect={handleFileSelect} />
+                                    {errors.length > 0 && (
+                                        <Alert variant="destructive" className="mt-4">
+                                            <AlertCircle className="h-4 w-4" />
+                                            <AlertTitle>Error parsing file</AlertTitle>
+                                            <AlertDescription>
+                                                {errors.slice(0, 3).map((e, i) => <div key={i}>{e}</div>)}
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+                                </>
+                            ) : (
+                                <ManualAssetForm onAdd={handleManualAdd} />
                             )}
                         </CardContent>
                     </Card>

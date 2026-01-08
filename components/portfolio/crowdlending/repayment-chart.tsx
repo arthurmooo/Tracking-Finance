@@ -39,6 +39,9 @@ export function RepaymentChart({ data }: RepaymentChartProps) {
                             <Tooltip
                                 content={({ active, payload }) => {
                                     if (active && payload && payload.length) {
+                                        const amount = typeof payload[0].value === 'number'
+                                            ? payload[0].value.toFixed(1)
+                                            : payload[0].value
                                         return (
                                             <div className="rounded-lg border bg-background p-2 shadow-sm text-xs">
                                                 <div className="grid grid-cols-2 gap-2">
@@ -52,7 +55,7 @@ export function RepaymentChart({ data }: RepaymentChartProps) {
                                                         Montant
                                                     </span>
                                                     <span className="font-bold text-emerald-500">
-                                                        €{payload[0].value}
+                                                        €{amount}
                                                     </span>
                                                 </div>
                                             </div>

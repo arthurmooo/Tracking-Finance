@@ -5,9 +5,10 @@ export interface ParsedAsset {
     isin?: string;
     name: string;
     quantity: number;
-    price?: number;
+    price?: number;      // Current/last price
+    buyPrice?: number;   // Purchase/cost price for P&L
     currency: string;
-    type: 'STOCK' | 'ETF' | 'CRYPTO' | 'REAL_ESTATE' | 'CROWDFUNDING' | 'CASH';
+    type: 'STOCK' | 'ETF' | 'CRYPTO' | 'REAL_ESTATE' | 'CROWDFUNDING' | 'CASH' | 'PRIVATE_EQUITY' | 'STARTUP';
 }
 
 export type CsvParserError = {
@@ -94,19 +95,31 @@ export const parseIbkrCsv = (csvText: string): CsvParserResult => {
         const symbol = row[colMap['Symbole']];
         const quantityStr = row[colMap['Quantité']];
         const priceStr = row[colMap['Cours de clôture']];
-        const currency = row[colMap['Devise']] || 'EUR';
-        const assetCategory = row[colMap["Catégorie d'actifs"]] || 'STOCK'; // "Actions"
+        const valueStr = row[colMap['Valeur']]; // Market value in asset currency
+        const costStr = row[colMap["Coût d'acquisition"]]; // Cost basis for P&L
+        const currency = row[colMap['Devise']] || 'USD';
+        const assetCategory = row[colMap["Catégorie d'actifs"]] || 'STOCK';
 
         // Type mapping
         let type: ParsedAsset['type'] = 'STOCK';
         if (assetCategory === 'Actions') type = 'STOCK';
-        // Add more mappings if needed
+
+        const quantity = parseEnglishNumber(quantityStr);
+        const price = parseEnglishNumber(priceStr);
+        const value = parseEnglishNumber(valueStr);
+        const cost = parseEnglishNumber(costStr);
+
+        // Use value/quantity as effective price if we have value
+        const effectivePrice = quantity > 0 && value > 0 ? value / quantity : price;
+        // Calculate buy price from cost basis
+        const buyPriceCalc = quantity > 0 && cost > 0 ? cost / quantity : undefined;
 
         assets.push({
             symbol: symbol,
-            name: symbol, // IBKR doesn't always give full name in this view, Symbole is ticker
-            quantity: parseEnglishNumber(quantityStr), // IBKR CSV usually uses dots for decimals in raw data, but let's be careful. The example shows "0.5855", so standard float.
-            price: parseEnglishNumber(priceStr),
+            name: symbol,
+            quantity: quantity,
+            price: effectivePrice,
+            buyPrice: buyPriceCalc, // For P&L calculation
             currency: currency,
             type: type
         });
@@ -138,13 +151,33 @@ export const parseBienPreterCsv = (csvText: string): CsvParserResult => {
         }
 
         const status = row['Statut'];
-        // Optional: Filter only active loans?
-        // if (status !== 'Prêt en cours') return;
+        const rate = parseFrenchNumber(row['Taux']); // Interest rate (e.g., 15 for 15%)
+        const duration = parseFrenchNumber(row['Durée de remboursements (mois)']);
+        const projectName = row['Projet'];
+        const company = row['Entreprise'];
+        const amount = parseFrenchNumber(row['Montant']);
+        const netInterestTotal = parseFrenchNumber(row['Intérêts nets perçus']); // Cumulative total
+        const mensualite = parseFrenchNumber(row['Mensualité']); // Monthly payment (capital + interest)
+        const startDateStr = row['Date de financement']; // e.g., "17/12/2025"
+        const endDateStr = row['Date de clôture']; // e.g., "06/04/2026"
+
+        // Store all metadata as JSON in symbol field
+        const metadata = JSON.stringify({
+            rate,
+            duration,
+            company,
+            status,
+            netInterestTotal,
+            mensualite,
+            startDate: startDateStr,
+            endDate: endDateStr
+        });
 
         assets.push({
-            name: row['Projet'],
-            quantity: 1, // Crowdfunding project = 1 unit
-            price: parseFrenchNumber(row['Montant']), // Price = Invested Amount
+            name: projectName,
+            symbol: metadata, // Store metadata as JSON in symbol field (temporary solution)
+            quantity: 1,
+            price: amount,
             currency: 'EUR',
             type: 'CROWDFUNDING'
         });
@@ -180,9 +213,12 @@ export const parseGenericCsv = (csvText: string): CsvParserResult => {
     const isinCol = findCol(['isin', 'code']);
     const symbolCol = findCol(['symbol', 'ticker']);
     const qtyCol = findCol(['quantity', 'quantité', 'qte', 'qté']);
-    const priceCol = findCol(['price', 'prix', 'cours', 'valeur du jour', 'lastprice']);
+    // IMPORTANT: Check for specific 'lastprice' FIRST before generic 'price' to avoid matching 'buyingPrice'
+    const priceCol = findCol(['lastprice', 'cours']) || findCol(['price', 'prix', 'valeur du jour']);
+    // buyingPrice for cost basis (if needed)
+    const buyPriceCol = findCol(['buyingprice', 'prix revient', 'pru']);
     // AV Specific: sometimes "Montant" is the total value, and we don't have price/qty split clearly
-    const valueCol = findCol(['montant', 'value', 'valorisation']);
+    const valueCol = findCol(['montant', 'value', 'valorisation', 'amount']);
 
     if (!nameCol) {
         return { assets, errors: [{ row: 0, message: "Could not detect a Name/Label column." }] };
@@ -194,12 +230,16 @@ export const parseGenericCsv = (csvText: string): CsvParserResult => {
 
         let quantity = 0;
         let price = 0;
+        let buyPrice = 0;
 
         // Strategy 1: Has Quantity and Price
         if (qtyCol) {
             quantity = parseFrenchNumber(row[qtyCol]);
             if (priceCol) {
                 price = parseFrenchNumber(row[priceCol]);
+            }
+            if (buyPriceCol) {
+                buyPrice = parseFrenchNumber(row[buyPriceCol]);
             }
         }
         // Strategy 2: Only has Value (no qty/price split) -> Qty=1, Price=Value
@@ -219,6 +259,7 @@ export const parseGenericCsv = (csvText: string): CsvParserResult => {
             symbol: symbolCol ? row[symbolCol] : undefined,
             quantity: quantity,
             price: price,
+            buyPrice: buyPrice > 0 ? buyPrice : undefined, // Only include if we have it
             currency: 'EUR',
             type: type
         });

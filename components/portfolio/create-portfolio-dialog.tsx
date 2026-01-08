@@ -19,16 +19,29 @@ export function CreatePortfolioDialog({ onCreated, trigger }: CreatePortfolioDia
     const [name, setName] = useState("")
     const [type, setType] = useState("PEA")
     const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
     const handleCreate = async () => {
-        if (!name) return;
+        if (!name) {
+            setError("Please enter a portfolio name");
+            return;
+        }
+        setError(null);
         setLoading(true);
-        const res = await createPortfolio(name, type);
-        setLoading(false);
-        if (res.success && res.data) {
-            onCreated(res.data.id);
-            setOpen(false);
-            setName("");
+        try {
+            const res = await createPortfolio(name, type);
+            if (res.success && res.data) {
+                onCreated(res.data.id);
+                setOpen(false);
+                setName("");
+            } else {
+                setError(res.error || "Failed to create portfolio");
+            }
+        } catch (err) {
+            setError("An unexpected error occurred");
+            console.error(err);
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -70,10 +83,17 @@ export function CreatePortfolioDialog({ onCreated, trigger }: CreatePortfolioDia
                                 <SelectItem value="CROWDFUNDING">Participatory Financing</SelectItem>
                                 <SelectItem value="PEE">Employee Savings (PEE)</SelectItem>
                                 <SelectItem value="LIQUIDITY">Cash / Bank</SelectItem>
+                                <SelectItem value="PRIVATE_EQUITY">Private Equity</SelectItem>
+                                <SelectItem value="STARTUP">Startup / Angel</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
                 </div>
+                {error && (
+                    <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+                        {error}
+                    </div>
+                )}
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
                     <Button onClick={handleCreate} disabled={loading}>

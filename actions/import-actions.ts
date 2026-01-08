@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from "@/db"
-import { assets, transactions } from "@/db/schema"
+import { assets, transactions, portfolios } from "@/db/schema"
 import { ParsedAsset } from "@/lib/csv-parsers"
 import { eq, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
@@ -48,13 +48,19 @@ export async function processImport(portfolioId: string, parsedAssets: ParsedAss
                 updatedCount++;
             } else {
                 // Insert
+                // Use buyPrice if available from CSV, otherwise fall back to currentPrice
+                const buyPriceValue = asset.buyPrice?.toString() || asset.price?.toString() || "0";
+
+                // Use symbol if available, otherwise use ISIN (for price lookups)
+                const symbolValue = asset.symbol || asset.isin || null;
+
                 await db.insert(assets).values({
                     portfolioId: portfolioId,
                     name: asset.name,
-                    symbol: asset.symbol || null,
+                    symbol: symbolValue,
                     quantity: asset.quantity.toString(),
                     currentPrice: asset.price?.toString() || "0",
-                    averageBuyPrice: asset.price?.toString() || "0", // Assume buy price = current price for new import
+                    averageBuyPrice: buyPriceValue,
                     currency: asset.currency,
                     type: asset.type
                 });
@@ -87,7 +93,6 @@ export async function getPortfoliosList() {
         });
         return { success: true, data: result };
     } catch (error) {
-    } catch (error) {
         console.error("Failed to fetch portfolios:", error);
         return { success: false, data: [] };
     }
@@ -98,7 +103,7 @@ export async function createPortfolio(name: string, type: string) {
         const user = await db.query.profiles.findFirst();
         if (!user) throw new Error("No user found");
 
-        const [portfolio] = await db.insert(db.query.portfolios.schema).values({
+        const [portfolio] = await db.insert(portfolios).values({
             userId: user.id,
             name: name,
             type: type,
@@ -111,5 +116,26 @@ export async function createPortfolio(name: string, type: string) {
     } catch (error) {
         console.error("Failed to create portfolio:", error);
         return { success: false, error: "Failed to create portfolio" };
+    }
+}
+
+export async function deletePortfolio(portfolioId: string) {
+    try {
+        // First delete all assets belonging to this portfolio
+        await db.delete(assets).where(eq(assets.portfolioId, portfolioId));
+
+        // Then delete the portfolio itself
+        await db.delete(portfolios).where(eq(portfolios.id, portfolioId));
+
+        revalidatePath('/import');
+        revalidatePath('/portfolio');
+        revalidatePath('/portfolio/stocks-funds');
+        revalidatePath('/portfolio/participatory-financing');
+        revalidatePath('/');
+
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to delete portfolio:", error);
+        return { success: false, error: "Failed to delete portfolio" };
     }
 }

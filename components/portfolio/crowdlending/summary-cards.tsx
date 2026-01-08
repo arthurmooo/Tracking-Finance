@@ -11,8 +11,8 @@ interface SummaryCardsProps {
 }
 
 export function SummaryCards({ totalInvested, averageYield, nextPayout }: SummaryCardsProps) {
-    const formatCurrency = (val: number) =>
-        new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(val)
+    const formatCurrency = (val: number, decimals: number = 0) =>
+        new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: decimals, minimumFractionDigits: decimals }).format(val)
 
     return (
         <div className="grid gap-4 md:grid-cols-3">
@@ -54,7 +54,7 @@ export function SummaryCards({ totalInvested, averageYield, nextPayout }: Summar
                 <CardContent className="p-6">
                     <p className="text-sm font-medium text-muted-foreground">Prochain Versement (Prévu)</p>
                     <div className="flex items-baseline gap-2 mt-1">
-                        <h2 className="text-3xl font-bold">{formatCurrency(nextPayout)}</h2>
+                        <h2 className="text-3xl font-bold">{formatCurrency(nextPayout, 1)}</h2>
                         <span className="text-xs text-muted-foreground font-medium">
                             Sous 30 jours
                         </span>
@@ -64,3 +64,4 @@ export function SummaryCards({ totalInvested, averageYield, nextPayout }: Summar
         </div>
     )
 }
+

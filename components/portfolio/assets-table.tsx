@@ -18,6 +18,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { AssetLogo } from "./asset-logo"
 
 export interface Asset {
     id: string
@@ -202,9 +203,13 @@ export function AssetsTable({ accounts = [], transactions = [] }: AssetsTablePro
                                             {account.assets.map(asset => (
                                                 <div key={asset.id} className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-secondary/20 transition-colors items-center text-sm">
                                                     <div className="col-span-5 pl-11 flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center overflow-hidden border border-border p-1 shrink-0">
-                                                            {/* Placeholder for asset logo */}
-                                                            <div className="w-full h-full bg-gray-100 rounded-full" />
+                                                        <div className="w-8 h-8 shrink-0">
+                                                            <AssetLogo
+                                                                name={asset.name}
+                                                                ticker={asset.ticker}
+                                                                isin={asset.isin}
+                                                                className="w-full h-full"
+                                                            />
                                                         </div>
                                                         <div className="overflow-hidden">
                                                             <div className="font-medium truncate text-foreground">{asset.name}</div>
