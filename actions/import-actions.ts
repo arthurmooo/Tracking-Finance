@@ -16,42 +16,49 @@ export async function processImport(portfolioId: string, parsedAssets: ParsedAss
         // For this MVP step, we trust the ID passed from the authorized UI.
 
         for (const asset of parsedAssets) {
-            // 1. Try to find existing asset
-            // Match by Symbol if available, otherwise by Name
+            // 1. Try to find existing asset by NAME within portfolio (works for all types)
+            // This ensures reimporting a CSV always updates existing assets, never duplicates
             let existingAsset = null;
 
-            if (asset.symbol) {
-                const results = await db.select().from(assets).where(
+            // Primary match: by name within portfolio
+            const resultsByName = await db.select().from(assets).where(
+                and(
+                    eq(assets.portfolioId, portfolioId),
+                    eq(assets.name, asset.name)
+                )
+            ).limit(1);
+            existingAsset = resultsByName[0];
+
+            // Secondary match: by symbol if no name match and symbol is valid (not JSON metadata)
+            if (!existingAsset && asset.symbol && !asset.symbol.startsWith('{')) {
+                const resultsBySymbol = await db.select().from(assets).where(
                     and(
                         eq(assets.portfolioId, portfolioId),
                         eq(assets.symbol, asset.symbol)
                     )
                 ).limit(1);
-                existingAsset = results[0];
-            } else {
-                const results = await db.select().from(assets).where(
-                    and(
-                        eq(assets.portfolioId, portfolioId),
-                        eq(assets.name, asset.name)
-                    )
-                ).limit(1);
-                existingAsset = results[0];
+                existingAsset = resultsBySymbol[0];
             }
 
             if (existingAsset) {
-                // Update
-                await db.update(assets).set({
-                    quantity: asset.quantity.toString(), // Schema uses decimal/string
+                // Update existing asset
+                // For crowdfunding, also update symbol (metadata JSON)
+                const updateData: any = {
+                    quantity: asset.quantity.toString(),
                     currentPrice: asset.price?.toString() || existingAsset.currentPrice,
                     updatedAt: new Date()
-                }).where(eq(assets.id, existingAsset.id));
+                };
+
+                // Update symbol/metadata for crowdfunding assets
+                if (asset.type === 'CROWDFUNDING' && asset.symbol) {
+                    updateData.symbol = asset.symbol;
+                }
+
+                await db.update(assets).set(updateData).where(eq(assets.id, existingAsset.id));
                 updatedCount++;
             } else {
-                // Insert
-                // Use buyPrice if available from CSV, otherwise fall back to currentPrice
+                // Insert new asset
                 const buyPriceValue = asset.buyPrice?.toString() || asset.price?.toString() || "0";
-
-                // Use symbol if available, otherwise use ISIN (for price lookups)
                 const symbolValue = asset.symbol || asset.isin || null;
 
                 await db.insert(assets).values({
@@ -65,9 +72,6 @@ export async function processImport(portfolioId: string, parsedAssets: ParsedAss
                     type: asset.type
                 });
                 importedCount++;
-
-                // Optional: Create an initial transaction record?
-                // skipping for now to keep it simple, straightforward import.
             }
         }
 

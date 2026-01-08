@@ -12,7 +12,7 @@ import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import { TimeRange, ViewMode } from "./stocks-funds-view"
 import { updateAllPrices } from "@/actions/price-actions"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { RefreshCw } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -179,11 +179,6 @@ function RefreshButton() {
             router.refresh();
         }
     };
-
-    // Auto-update on mount
-    useEffect(() => {
-        handleRefresh();
-    }, []);
 
     return (
         <button

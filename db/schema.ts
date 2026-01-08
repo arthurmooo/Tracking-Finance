@@ -69,6 +69,17 @@ export const dailySnapshots = pgTable('daily_snapshots', {
     createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// Intraday Snapshots: Hourly/Frequent historical net worth for granular charts
+export const intradaySnapshots = pgTable('intraday_snapshots', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').references(() => profiles.id).notNull(),
+    timestamp: timestamp('timestamp', { withTimezone: true }).notNull(), // Full timestamp
+    totalNetWorth: decimal('total_net_worth').notNull(),
+    currency: varchar('currency', { length: 3 }).default('EUR').notNull(),
+    data: jsonb('data'), // Stores breakdown e.g. { "stocks": 100, "crowdfunding": 50 }
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Crowdlending Projects: For participatory financing tracking
 export const crowdlendingProjects = pgTable('crowdlending_projects', {
     id: uuid('id').primaryKey().defaultRandom(),

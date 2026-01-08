@@ -17,7 +17,7 @@ async function test() {
             if (/^[A-Z]{2}[A-Z0-9]{10}$/.test(s)) {
                 const searchRes = await yahooFinance.search(s);
                 if (searchRes.quotes && searchRes.quotes.length > 0) {
-                    ticker = searchRes.quotes[0].symbol;
+                    ticker = searchRes.quotes[0].symbol as string;
                     console.log(`Resolved ${s} -> ${ticker}`);
                 } else {
                     console.log(`Could not resolve ISIN ${s}`);

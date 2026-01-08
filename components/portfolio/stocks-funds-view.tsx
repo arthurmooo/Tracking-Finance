@@ -12,9 +12,10 @@ interface StocksFundsViewProps {
     changeValue: number
     changePercentage: number
     historyData?: { date: string; value: number }[]
+    intradayData?: { date: string; value: number }[]
 }
 
-export function StocksFundsView({ totalValue, changeValue, changePercentage, historyData }: StocksFundsViewProps) {
+export function StocksFundsView({ totalValue, changeValue, changePercentage, historyData, intradayData }: StocksFundsViewProps) {
     const [selectedRange, setSelectedRange] = useState<TimeRange>("YTD")
     const [viewMode, setViewMode] = useState<ViewMode>("portfolio")
     const [benchmark, setBenchmark] = useState<string>("none")
@@ -37,6 +38,7 @@ export function StocksFundsView({ totalValue, changeValue, changePercentage, his
             />
             <PerformanceChart
                 data={historyData}
+                intradayData={intradayData}
                 range={selectedRange}
                 viewMode={viewMode}
                 benchmark={benchmark}

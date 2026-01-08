@@ -10,12 +10,33 @@ import {
 } from "@/components/ui/table"
 import { ParsedAsset } from "@/lib/csv-parsers"
 import { Badge } from "@/components/ui/badge"
+import { useSortableTable, SortableHeader, sortData } from "@/hooks/use-sortable-table"
 
 interface CsvPreviewTableProps {
     assets: ParsedAsset[]
 }
 
+type AssetSortColumn = 'type' | 'name' | 'quantity' | 'price' | 'totalValue'
+
 export function CsvPreviewTable({ assets }: CsvPreviewTableProps) {
+    const { sortColumn, sortDirection, toggleSort } = useSortableTable<AssetSortColumn>({
+        defaultColumn: 'totalValue',
+        defaultDirection: 'desc'
+    })
+
+    const getAssetValue = (asset: ParsedAsset, column: AssetSortColumn): string | number => {
+        switch (column) {
+            case 'type': return asset.type
+            case 'name': return asset.name
+            case 'quantity': return asset.quantity
+            case 'price': return asset.price || 0
+            case 'totalValue': return (asset.price || 0) * asset.quantity
+            default: return 0
+        }
+    }
+
+    const sortedAssets = sortData(assets, sortColumn, sortDirection, getAssetValue)
+
     if (assets.length === 0) {
         return <div className="text-center text-muted-foreground py-8">No valid assets found in this file.</div>
     }
@@ -25,15 +46,41 @@ export function CsvPreviewTable({ assets }: CsvPreviewTableProps) {
             <Table>
                 <TableHeader className="bg-secondary/20">
                     <TableRow>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Name / Symbol</TableHead>
-                        <TableHead className="text-right">Quantity</TableHead>
-                        <TableHead className="text-right">Price</TableHead>
-                        <TableHead className="text-right">Total Value</TableHead>
+                        <TableHead>
+                            <SortableHeader column="type" currentColumn={sortColumn} direction={sortDirection} onSort={toggleSort}>
+                                Type
+                            </SortableHeader>
+                        </TableHead>
+                        <TableHead>
+                            <SortableHeader column="name" currentColumn={sortColumn} direction={sortDirection} onSort={toggleSort}>
+                                Name / Symbol
+                            </SortableHeader>
+                        </TableHead>
+                        <TableHead className="text-right">
+                            <div className="flex justify-end">
+                                <SortableHeader column="quantity" currentColumn={sortColumn} direction={sortDirection} onSort={toggleSort}>
+                                    Quantity
+                                </SortableHeader>
+                            </div>
+                        </TableHead>
+                        <TableHead className="text-right">
+                            <div className="flex justify-end">
+                                <SortableHeader column="price" currentColumn={sortColumn} direction={sortDirection} onSort={toggleSort}>
+                                    Price
+                                </SortableHeader>
+                            </div>
+                        </TableHead>
+                        <TableHead className="text-right">
+                            <div className="flex justify-end">
+                                <SortableHeader column="totalValue" currentColumn={sortColumn} direction={sortDirection} onSort={toggleSort}>
+                                    Total Value
+                                </SortableHeader>
+                            </div>
+                        </TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {assets.map((asset, index) => (
+                    {sortedAssets.map((asset, index) => (
                         <TableRow key={index}>
                             <TableCell>
                                 <Badge variant="outline" className="text-[10px]">

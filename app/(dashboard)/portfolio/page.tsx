@@ -13,10 +13,18 @@ export default async function PortfolioPage() {
         return sum + (qty * price)
     }, 0)
 
-    const snapshots = data.snapshots.map(s => ({
+    // Merge daily and intraday snapshots for richer chart
+    const dailySnapshots = data.snapshots.map((s: any) => ({
         date: s.date,
         value: parseFloat(s.totalNetWorth)
     }))
+
+    const intradaySnapshots = (data.intradaySnapshots || []).map((s: any) => ({
+        date: s.timestamp ? new Date(s.timestamp).toISOString() : new Date().toISOString(),
+        value: parseFloat(s.totalNetWorth)
+    }))
+
+    const snapshots = [...dailySnapshots, ...intradaySnapshots]
 
     // Use real-time value for the display, fallback to snapshot if empty (which shouldn't happen with real data)
     const currentNetWorth = realTimeNetWorth || (snapshots.length > 0 ? snapshots[snapshots.length - 1].value : 0)
@@ -143,6 +151,7 @@ export default async function PortfolioPage() {
                 snapshots={snapshots}
                 ytdPnl={ytdPnl}
                 ytdPnlPercent={ytdPnlPercent}
+                categories={categories}
             />
 
             <AssetsBreakdown

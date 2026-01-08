@@ -21,44 +21,56 @@ import {
 
 type TimeTab = '1D' | '7D' | '1M' | 'YTD' | '1Y' | 'ALL'
 
+interface CategoryData {
+    id: string
+    name: string
+    totalValue: number
+    percentage: number
+    pnl: number
+    pnlPercent: number
+}
+
 interface PortfolioSummaryProps {
     totalWorth: number
     snapshots: { date: string; value: number }[]
     ytdPnl: number
     ytdPnlPercent: number
+    categories?: CategoryData[]
     className?: string
 }
 
-const categories = [
+const categoryOptions = [
     { id: 'all', label: 'All categories' },
     { id: 'stocks', label: 'Stocks & Funds' },
     { id: 'crypto', label: 'Cryptos' },
     { id: 'cash', label: 'Checking accounts' },
     { id: 'real_estate', label: 'Real Estate' },
+    { id: 'crowdfunding', label: 'Participatory Financing' },
 ]
 
-function filterSnapshotsByRange(snapshots: { date: string; value: number }[], range: TimeTab, category: string = 'all') {
+function filterSnapshotsByRange(
+    snapshots: { date: string; value: number }[],
+    range: TimeTab,
+    category: string = 'all',
+    categoryData?: CategoryData[],
+    totalWorth?: number
+) {
     const currentYear = new Date().getFullYear().toString()
 
-    // Simulate category specific data
-    const processingSnapshots = snapshots.map((s, i) => {
-        let val = s.value
-        // Simple deterministic simulation for demo based on index
-        if (category === 'crypto') {
-            // High volatility
-            val = val * (1 + Math.sin(i * 0.2) * 0.15)
-        } else if (category === 'cash') {
-            // Flat / Slow growth
-            val = 20000 + (i * 20)
-        } else if (category === 'real_estate') {
-            // Step growth
-            val = 150000 + Math.floor(i / 100) * 10000 + (i * 50)
-        } else if (category === 'stocks') {
-            // Similar to global but slightly different
-            val = val * 0.9 + (Math.sin(i * 0.05) * 1000)
+    // Calculate the ratio for the selected category based on real data
+    let categoryRatio = 1
+    if (category !== 'all' && categoryData && totalWorth && totalWorth > 0) {
+        const selectedCat = categoryData.find(c => c.id === category)
+        if (selectedCat) {
+            categoryRatio = selectedCat.totalValue / totalWorth
         }
-        return { ...s, value: val }
-    })
+    }
+
+    // Scale snapshots by the category ratio
+    const processingSnapshots = snapshots.map((s) => ({
+        ...s,
+        value: s.value * categoryRatio
+    }))
 
     let filtered = processingSnapshots
 
@@ -110,7 +122,7 @@ const TimeTabs = ({ selected, onSelect }: TimeTabsProps) => (
     </div>
 )
 
-export function PortfolioSummary({ totalWorth, snapshots, ytdPnl, ytdPnlPercent, className }: PortfolioSummaryProps) {
+export function PortfolioSummary({ totalWorth, snapshots, ytdPnl, ytdPnlPercent, categories: categoryData, className }: PortfolioSummaryProps) {
     const [mounted, setMounted] = useState(false)
     const [selectedTab, setSelectedTab] = useState<TimeTab>('YTD')
     const [selectedCategory, setSelectedCategory] = useState('all')
@@ -119,9 +131,16 @@ export function PortfolioSummary({ totalWorth, snapshots, ytdPnl, ytdPnlPercent,
         setMounted(true)
     }, [])
 
+    // Get current category value for display
+    const currentCategoryValue = useMemo(() => {
+        if (selectedCategory === 'all' || !categoryData) return totalWorth
+        const cat = categoryData.find(c => c.id === selectedCategory)
+        return cat?.totalValue ?? totalWorth
+    }, [selectedCategory, categoryData, totalWorth])
+
     const filteredSnapshots = useMemo(
-        () => filterSnapshotsByRange(snapshots, selectedTab, selectedCategory),
-        [snapshots, selectedTab, selectedCategory]
+        () => filterSnapshotsByRange(snapshots, selectedTab, selectedCategory, categoryData, totalWorth),
+        [snapshots, selectedTab, selectedCategory, categoryData, totalWorth]
     )
 
     // Calculate P&L based on filtered data
@@ -130,7 +149,7 @@ export function PortfolioSummary({ totalWorth, snapshots, ytdPnl, ytdPnlPercent,
     const displayPnl = selectedTab === 'YTD' ? ytdPnl : (endValue - startValue)
     const displayPnlPercent = selectedTab === 'YTD' ? ytdPnlPercent : (startValue > 0 ? ((endValue - startValue) / startValue) * 100 : 0)
 
-    const selectedCategoryLabel = categories.find(c => c.id === selectedCategory)?.label || 'All categories'
+    const selectedCategoryLabel = categoryOptions.find(c => c.id === selectedCategory)?.label || 'All categories'
 
     // Format current date
     const today = new Date().toLocaleDateString("en-US", {
@@ -157,7 +176,7 @@ export function PortfolioSummary({ totalWorth, snapshots, ytdPnl, ytdPnlPercent,
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                {categories.map((cat) => (
+                                {categoryOptions.map((cat) => (
                                     <DropdownMenuItem
                                         key={cat.id}
                                         onClick={() => setSelectedCategory(cat.id)}
@@ -176,7 +195,7 @@ export function PortfolioSummary({ totalWorth, snapshots, ytdPnl, ytdPnlPercent,
                     <div className="px-6 flex flex-col gap-1">
                         <span className="text-sm text-muted-foreground/60 font-medium">{today}</span>
                         <span className="text-5xl font-bold tracking-tight text-foreground">
-                            {new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(totalWorth)}
+                            {new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(currentCategoryValue)}
                         </span>
                     </div>
                     <div className="h-[280px] w-full mt-4">
@@ -197,16 +216,35 @@ export function PortfolioSummary({ totalWorth, snapshots, ytdPnl, ytdPnlPercent,
                                     minTickGap={50}
                                     tick={{ fill: 'var(--muted-foreground)' }}
                                     dy={10}
+                                    tickFormatter={(value: string) => {
+                                        const date = new Date(value)
+                                        if (isNaN(date.getTime())) return value
+                                        if (selectedTab === '1D') {
+                                            return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                                        }
+                                        if (selectedTab === '7D' || selectedTab === '1M') {
+                                            return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+                                        }
+                                        return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+                                    }}
                                 />
                                 <YAxis
                                     stroke="#888888"
                                     fontSize={12}
                                     tickLine={false}
                                     axisLine={false}
-                                    tickFormatter={(value) => `€${value / 1000}k`}
+                                    tickFormatter={(value: number) =>
+                                        new Intl.NumberFormat('fr-FR', {
+                                            notation: 'compact',
+                                            compactDisplay: 'short',
+                                            style: 'currency',
+                                            currency: 'EUR',
+                                            maximumFractionDigits: 1
+                                        }).format(value)
+                                    }
                                     domain={['auto', 'auto']}
                                     tick={{ fill: 'var(--muted-foreground)' }}
-                                    width={40}
+                                    width={55}
                                 />
                                 <Tooltip
                                     contentStyle={{ backgroundColor: 'var(--popover)', borderColor: 'var(--border)', borderRadius: '8px' }}

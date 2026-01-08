@@ -1,6 +1,6 @@
 import { db } from "@/db"
-import { dailySnapshots, assets, portfolios, transactions } from "@/db/schema"
-import { asc, eq, sql } from "drizzle-orm"
+import { dailySnapshots, intradaySnapshots, assets, portfolios, transactions } from "@/db/schema"
+import { asc, desc, eq, sql, gte } from "drizzle-orm"
 import {
     calculateGeographicDiversification,
     calculateSectorDiversification,
@@ -11,10 +11,19 @@ import {
 
 export async function getDashboardData() {
     try {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
         const results = await Promise.all([
+            // Daily history for long term
             db.query.dailySnapshots.findMany({
                 orderBy: [asc(dailySnapshots.date)],
                 limit: 365
+            }),
+            // Intraday history for short term (1D, 7D)
+            db.query.intradaySnapshots.findMany({
+                where: gte(intradaySnapshots.timestamp, sevenDaysAgo),
+                orderBy: [asc(intradaySnapshots.timestamp)]
             }),
             db.query.assets.findMany(),
             db.query.portfolios.findMany()
@@ -22,14 +31,16 @@ export async function getDashboardData() {
 
         return {
             snapshots: results[0] || [],
-            assets: results[1] || [],
-            portfolios: results[2] || []
+            intradaySnapshots: results[1] || [],
+            assets: results[2] || [],
+            portfolios: results[3] || []
         }
 
     } catch (error) {
         console.warn("⚠️ Database Error:", error);
         return {
             snapshots: [],
+            intradaySnapshots: [],
             assets: [],
             portfolios: []
         };
@@ -185,6 +196,120 @@ export async function getInsightsData() {
             }
         }
 
+        // ===== PASSIVE INCOME DETAILS (Granular) =====
+
+        // Fetch crowdlending projects for repayment projections
+        const crowdlendingProjectsData = await db.query.crowdlendingProjects.findMany()
+
+        // Helper: Calculate monthly interest payment for a project
+        function getMonthlyPayment(project: typeof crowdlendingProjectsData[0], targetMonth: Date): number {
+            const startDate = new Date(project.startDate)
+            const endDate = new Date(startDate)
+            endDate.setMonth(endDate.getMonth() + project.durationMonths)
+
+            // Check if targetMonth is within project's active period
+            const targetStart = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), 1)
+            const targetEnd = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0)
+
+            if (targetStart < startDate || targetEnd > endDate) return 0
+            if (project.status !== 'ACTIVE' && project.status !== 'active') return 0
+
+            const invested = parseFloat(project.investedAmount)
+            const rate = parseFloat(project.interestRate) / 100
+
+            if (project.repaymentType === 'BULLET') {
+                // Interest paid monthly, principal at end
+                return (invested * rate) / 12
+            } else {
+                // MONTHLY: Amortizing loan - simplified monthly interest
+                return (invested * rate) / 12
+            }
+        }
+
+        // 1. Monthly Breakdown (Last 12 Months + projections)
+        const monthlyPassiveIncome = Array.from({ length: 12 }, (_, i) => {
+            const d = new Date()
+            d.setMonth(d.getMonth() + (i - 11)) // Start 11 months ago
+            d.setDate(1) // Avoid month rollover issues (e.g. Feb 30)
+            const monthKey = d.toLocaleString('fr-FR', { month: 'short' }).toUpperCase() + '.'
+            const fullDate = d.toLocaleString('fr-FR', { month: 'long', year: 'numeric' })
+            // Capitalize first letter of fullDate
+            const formattedFullDate = fullDate.charAt(0).toUpperCase() + fullDate.slice(1)
+
+            // Historical dividend/interest transactions for this month
+            const monthTransactions = transactionsData.filter(t => {
+                if (t.type !== 'DIVIDEND' && t.type !== 'INTEREST') return false
+                const tDate = new Date(t.date)
+                return tDate.getMonth() === d.getMonth() && tDate.getFullYear() === d.getFullYear()
+            })
+
+            const dividendValue = monthTransactions.reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0)
+
+            // Crowdlending repayments for this month
+            const crowdlendingValue = crowdlendingProjectsData.reduce((sum, project) => {
+                return sum + getMonthlyPayment(project, d)
+            }, 0)
+
+            const value = dividendValue + crowdlendingValue
+
+            return {
+                month: monthKey,
+                value: Math.round(value * 100) / 100,
+                fullDate: formattedFullDate,
+            }
+        })
+
+        // 2. Historical Transactions List (Perçus)
+        const historicalTransactions = transactionsData
+            .filter(t => t.type === 'DIVIDEND' || t.type === 'INTEREST')
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .slice(0, 20)
+            .map(t => {
+                const asset = assetsData.find(a => a.id === t.assetId)
+                return {
+                    id: t.id,
+                    name: asset ? asset.name : 'Unknown Asset',
+                    ticker: asset ? asset.symbol : '',
+                    status: 'Confirmé',
+                    date: new Date(t.date).toLocaleDateString('fr-FR'),
+                    amount: parseFloat(t.amount || '0'),
+                    logo: asset?.symbol && !asset.symbol.startsWith('{')
+                        ? `https://logo.clearbit.com/${asset.name.split(' ')[0].toLowerCase()}.com`
+                        : null,
+                    isProjected: false
+                }
+            })
+
+        // 3. Upcoming Projected Payments (À venir)
+        const now = new Date()
+        const upcomingTransactions: typeof historicalTransactions = []
+
+        // Add crowdlending projected payments for the next 6 months
+        for (let monthOffset = 0; monthOffset < 6; monthOffset++) {
+            const targetMonth = new Date(now.getFullYear(), now.getMonth() + monthOffset, 15)
+
+            for (const project of crowdlendingProjectsData) {
+                const payment = getMonthlyPayment(project, targetMonth)
+                if (payment > 0) {
+                    upcomingTransactions.push({
+                        id: `proj-${project.id}-${monthOffset}`,
+                        name: project.name,
+                        ticker: project.platform,
+                        status: 'Projeté',
+                        date: targetMonth.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }),
+                        amount: Math.round(payment * 100) / 100,
+                        logo: project.platform.toLowerCase().includes('bienpreter')
+                            ? 'https://logo.clearbit.com/bienpreter.com'
+                            : null,
+                        isProjected: true
+                    })
+                }
+            }
+        }
+
+        // Combined list for backward compatibility
+        const passiveIncomeTransactions = [...historicalTransactions]
+
         const totalPassiveIncome = totalDividends + crowdfundingIncome
         const totalInvestableAssets = totalStocksValue + crowdfundingValue
         const avgPassiveYield = totalInvestableAssets > 0
@@ -216,6 +341,9 @@ export async function getInsightsData() {
             // Passive Income
             totalPassiveIncome: Math.round(totalPassiveIncome),
             avgPassiveYield: Math.round(avgPassiveYield * 100) / 100,
+            monthlyPassiveIncome,
+            passiveIncomeTransactions,
+            upcomingTransactions,
 
             // Totals for reference
             totalStocksValue,
@@ -240,6 +368,9 @@ export async function getInsightsData() {
             sectorStatus: 'Insufficient' as const,
             totalPassiveIncome: 0,
             avgPassiveYield: 0,
+            monthlyPassiveIncome: [],
+            passiveIncomeTransactions: [],
+            upcomingTransactions: [],
             totalStocksValue: 0,
             totalCrowdfundingValue: 0
         }

@@ -26,7 +26,7 @@ export default async function ParticipatoryFinancingPage() {
         let company = '';
         let status = 'ACTIVE';
         let mensualite = 0; // Monthly payment
-        let startDateStr = '';
+        let startDate: Date | null = null;
         let currentMonth = 1;
 
         try {
@@ -38,13 +38,13 @@ export default async function ParticipatoryFinancingPage() {
                 status = metadata.status === 'Prêt en cours' ? 'ACTIVE' :
                     metadata.status === 'Terminé' ? 'COMPLETED' : 'ACTIVE';
                 mensualite = metadata.mensualite || 0;
-                startDateStr = metadata.startDate || '';
+                const startDateStr = metadata.startDate || '';
 
                 // Calculate elapsed months from start date
                 if (startDateStr) {
                     // Parse French date format (DD/MM/YYYY)
                     const [day, month, year] = startDateStr.split('/').map(Number);
-                    const startDate = new Date(year, month - 1, day);
+                    startDate = new Date(year, month - 1, day);
                     const now = new Date();
                     const monthsElapsed = Math.floor(
                         (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44)
@@ -63,7 +63,7 @@ export default async function ParticipatoryFinancingPage() {
             investedAmount: parseFloat(asset.quantity) * parseFloat(asset.currentPrice || '0'),
             interestRate: rate,
             mensualite: mensualite, // Monthly payment (capital + interest)
-            startDate: startDateStr || asset.createdAt || new Date().toISOString(),
+            startDate: startDate ? startDate.toISOString() : (asset.createdAt || new Date().toISOString()),
             durationMonths: duration,
             currentMonth: currentMonth,
             status: status as 'ACTIVE' | 'COMPLETED' | 'LATE'
@@ -84,16 +84,6 @@ export default async function ParticipatoryFinancingPage() {
         }
         return sum;
     }, 0);
-
-    // Simple repayment chart data (placeholder until we have real repayment tracking)
-    const repaymentData = [
-        { month: "Jan", amount: nextPayout },
-        { month: "Fev", amount: nextPayout },
-        { month: "Mar", amount: nextPayout },
-        { month: "Avr", amount: nextPayout },
-        { month: "Mai", amount: nextPayout },
-        { month: "Juin", amount: nextPayout },
-    ]
 
     const platformCount = [...new Set(projects.map((p: any) => p.platform))].length
 
@@ -141,17 +131,7 @@ export default async function ParticipatoryFinancingPage() {
                     <div className="grid gap-8 lg:grid-cols-3">
                         {/* Main Content: Chart & List */}
                         <div className="lg:col-span-2 space-y-8">
-                            <RepaymentChart data={repaymentData} />
-
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <h2 className="text-xl font-semibold">Projets en cours</h2>
-                                    <div className="text-xs text-muted-foreground">
-                                        {projects.filter((p: any) => p.status === 'ACTIVE').length} projets actifs
-                                    </div>
-                                </div>
-                                <ProjectList projects={projects} />
-                            </div>
+                            <RepaymentChart projects={projects} />
                         </div>
 
                         {/* Sidebar: Platform breakdown */}
@@ -174,6 +154,16 @@ export default async function ParticipatoryFinancingPage() {
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-xl font-semibold">Projets en cours</h2>
+                            <div className="text-xs text-muted-foreground">
+                                {projects.filter((p: any) => p.status === 'ACTIVE').length} projets actifs
+                            </div>
+                        </div>
+                        <ProjectList projects={projects} />
                     </div>
                 </>
             )}

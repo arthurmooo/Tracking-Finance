@@ -33,20 +33,21 @@ export default async function StocksFundsPage() {
                 totalPnlPercent,
                 assets: pAssets.map((a: any) => {
                     const quantity = parseFloat(a.quantity)
-                    const price = parseFloat(a.currentPrice || a.price || 0)
-                    const buyPrice = parseFloat(a.averageBuyPrice || price)
-                    const value = quantity * price
-                    const pnl = value - (quantity * buyPrice)
+                    const marketPrice = parseFloat(a.currentPrice || a.price || 0)
+                    const averageCost = parseFloat(a.averageBuyPrice || marketPrice)
+                    const value = quantity * marketPrice
+                    const pnl = value - (quantity * averageCost)
 
                     return {
                         id: a.id,
                         name: a.name,
                         ticker: a.symbol,
                         quantity,
-                        price,
+                        averageCost,
+                        marketPrice,
                         value,
                         pnl,
-                        pnlPercent: (pnl / (quantity * buyPrice)) * 100,
+                        pnlPercent: (pnl / (quantity * averageCost)) * 100,
                         currency: "EUR",
                         type: a.type.toLowerCase()
                     } as Asset
@@ -61,19 +62,26 @@ export default async function StocksFundsPage() {
     const changeValue = 0
     const changePercentage = 0
 
-    const historyData = data.snapshots.map((s: any) => {
-        let value = parseFloat(s.totalNetWorth)
+    // Prepare history data - merge daily and intraday
+    // We'll pass both to the view separately or merged, but for now let's create a specialized dataset
+    // Actually, passing raw data is better so the component can choose based on range
 
-        // If we have granular data, use the 'stocks' component
-        // This prevents mixing Crowdfunding/Crypto values into the Stocks curve
+    const dailyHistory = data.snapshots.map((s: any) => {
+        let value = parseFloat(s.totalNetWorth)
         if (s.data && typeof s.data === 'object' && 'stocks' in s.data) {
             value = Number(s.data.stocks)
         }
+        return { date: s.date, value }
+    })
 
-        return {
-            date: s.date,
-            value
+    const intradayHistory = (data.intradaySnapshots || []).map((s: any) => {
+        let value = parseFloat(s.totalNetWorth)
+        if (s.data && typeof s.data === 'object' && 'stocks' in s.data) {
+            value = Number(s.data.stocks)
         }
+        // Use timestamp field (not date) and convert to ISO string for chart
+        const dateStr = s.timestamp ? new Date(s.timestamp).toISOString() : new Date().toISOString()
+        return { date: dateStr, value }
     })
 
     return (
@@ -82,7 +90,8 @@ export default async function StocksFundsPage() {
                 totalValue={totalValue}
                 changeValue={changeValue}
                 changePercentage={changePercentage}
-                historyData={historyData}
+                historyData={dailyHistory}
+                intradayData={intradayHistory}
             />
             <InsightsSection
                 feePercent={insights.feePercent}
@@ -101,4 +110,3 @@ export default async function StocksFundsPage() {
         </div>
     )
 }
-

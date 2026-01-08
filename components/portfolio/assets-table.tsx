@@ -19,6 +19,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { AssetLogo } from "./asset-logo"
+import { useSortableTable, SortableHeader, sortData } from "@/hooks/use-sortable-table"
 
 export interface Asset {
     id: string
@@ -26,7 +27,8 @@ export interface Asset {
     ticker?: string
     isin?: string
     quantity: number
-    price: number
+    averageCost: number
+    marketPrice: number
     value: number
     pnl: number
     pnlPercent: number
@@ -73,10 +75,17 @@ const timeRangeOptions: { id: TimeRange; label: string }[] = [
     { id: 'ALL', label: 'All time' },
 ]
 
+type AssetSortColumn = 'name' | 'quantity' | 'avgCost' | 'marketPrice' | 'value' | 'pnl'
+
 export function AssetsTable({ accounts = [], transactions = [] }: AssetsTableProps) {
     const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
     const [activeTab, setActiveTab] = useState<ViewTab>('accounts')
     const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRange>('YTD')
+
+    const { sortColumn, sortDirection, toggleSort } = useSortableTable<AssetSortColumn>({
+        defaultColumn: 'value',
+        defaultDirection: 'desc'
+    })
 
     const toggleRow = (id: string) => {
         setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
@@ -86,6 +95,22 @@ export function AssetsTable({ accounts = [], transactions = [] }: AssetsTablePro
     const formatCurrencyPrecise = (val: number) => new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 }).format(val);
 
     const selectedTimeRangeLabel = timeRangeOptions.find(t => t.id === selectedTimeRange)?.label || 'Year to date'
+
+    const getAssetValue = (asset: Asset, column: AssetSortColumn): string | number => {
+        switch (column) {
+            case 'name': return asset.name
+            case 'quantity': return asset.quantity
+            case 'avgCost': return asset.averageCost
+            case 'marketPrice': return asset.marketPrice
+            case 'value': return asset.value
+            case 'pnl': return asset.pnl
+            default: return 0
+        }
+    }
+
+    const sortedAssetsFn = (assets: Asset[]): Asset[] => {
+        return sortData(assets, sortColumn, sortDirection, getAssetValue)
+    }
 
     return (
         <div className="space-y-4 pt-8 pb-12">
@@ -142,12 +167,24 @@ export function AssetsTable({ accounts = [], transactions = [] }: AssetsTablePro
                 <div className="rounded-lg border border-border overflow-hidden bg-card/50">
                     {/* Header */}
                     <div className="grid grid-cols-12 gap-4 px-4 py-3 text-xs font-medium text-muted-foreground border-b border-border bg-card">
-                        <div className="col-span-5">Name</div>
-                        <div className="col-span-1 text-right">Amount</div>
-                        <div className="col-span-2 text-right">Average Cost</div>
-                        <div className="col-span-2 text-right">Market price</div>
-                        <div className="col-span-1 text-right">Value <span className="text-[10px]">▼</span></div>
-                        <div className="col-span-1 text-right">{selectedTimeRange} P&L</div>
+                        <div className="col-span-5">
+                            <SortableHeader column="name" currentColumn={sortColumn} direction={sortDirection} onSort={toggleSort}>Name</SortableHeader>
+                        </div>
+                        <div className="col-span-1 text-right flex justify-end">
+                            <SortableHeader column="quantity" currentColumn={sortColumn} direction={sortDirection} onSort={toggleSort}>Amount</SortableHeader>
+                        </div>
+                        <div className="col-span-2 text-right flex justify-end">
+                            <SortableHeader column="avgCost" currentColumn={sortColumn} direction={sortDirection} onSort={toggleSort}>Average Cost</SortableHeader>
+                        </div>
+                        <div className="col-span-2 text-right flex justify-end">
+                            <SortableHeader column="marketPrice" currentColumn={sortColumn} direction={sortDirection} onSort={toggleSort}>Market price</SortableHeader>
+                        </div>
+                        <div className="col-span-1 text-right flex justify-end">
+                            <SortableHeader column="value" currentColumn={sortColumn} direction={sortDirection} onSort={toggleSort}>Value</SortableHeader>
+                        </div>
+                        <div className="col-span-1 text-right flex justify-end">
+                            <SortableHeader column="pnl" currentColumn={sortColumn} direction={sortDirection} onSort={toggleSort}>P&L</SortableHeader>
+                        </div>
                     </div>
 
                     {/* Rows */}
@@ -200,7 +237,7 @@ export function AssetsTable({ accounts = [], transactions = [] }: AssetsTablePro
                                     {/* Assets Expansion */}
                                     {expandedRows[account.id] && account.assets.length > 0 && (
                                         <div className="bg-background/50 divide-y divide-border/50 border-t border-border/50">
-                                            {account.assets.map(asset => (
+                                            {sortedAssetsFn(account.assets).map(asset => (
                                                 <div key={asset.id} className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-secondary/20 transition-colors items-center text-sm">
                                                     <div className="col-span-5 pl-11 flex items-center gap-3">
                                                         <div className="w-8 h-8 shrink-0">
@@ -219,8 +256,8 @@ export function AssetsTable({ accounts = [], transactions = [] }: AssetsTablePro
                                                         </div>
                                                     </div>
                                                     <div className="col-span-1 text-right text-muted-foreground">{asset.quantity}</div>
-                                                    <div className="col-span-2 text-right text-muted-foreground">{formatCurrencyPrecise(asset.price)}</div>
-                                                    <div className="col-span-2 text-right text-muted-foreground">€{formatCurrencyPrecise(asset.price)}</div> {/* Using current price as market price for now */}
+                                                    <div className="col-span-2 text-right text-muted-foreground">{formatCurrencyPrecise(asset.averageCost)}</div>
+                                                    <div className="col-span-2 text-right text-muted-foreground">{formatCurrencyPrecise(asset.marketPrice)}</div>
 
                                                     <div className="col-span-1 text-right font-medium">
                                                         €{Math.round(asset.value)}

@@ -1,4 +1,4 @@
-import { parseBienPreterCsv, parseFrenchNumber } from "./csv-parsers";
+import { parseBienPreterCsv } from "./csv-parsers";
 import * as fs from "fs";
 
 const csv = fs.readFileSync("./Exemples CSV/csv BienPreter.csv", "utf-8");

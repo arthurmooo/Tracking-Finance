@@ -50,20 +50,36 @@ function filterDataByRange(data: any[], range: TimeRange) {
 
 interface PerformanceChartProps {
     data?: { date: string; value: number }[]
+    intradayData?: { date: string; value: number }[]
     range: TimeRange
     viewMode: ViewMode
     benchmark?: string
     chartType?: "area" | "candlestick"
 }
 
-export function PerformanceChart({ data = [], range, viewMode, benchmark = "none", chartType = "area" }: PerformanceChartProps) {
+export function PerformanceChart({ data = [], intradayData = [], range, viewMode, benchmark = "none", chartType = "area" }: PerformanceChartProps) {
     const [mounted, setMounted] = useState(false)
 
     useEffect(() => {
         setMounted(true)
     }, [])
 
-    const filteredData = useMemo(() => filterDataByRange(data, range), [data, range])
+    const filteredData = useMemo(() => {
+        // Use intraday data for short ranges if available
+        if ((range === "1D" || range === "7D") && intradayData.length > 0) {
+            // For 1D, we might want last 24h
+            if (range === "1D") {
+                const oneDayAgo = new Date();
+                oneDayAgo.setHours(oneDayAgo.getHours() - 24);
+                return intradayData.filter(d => new Date(d.date) >= oneDayAgo);
+            }
+            // For 7D, return all intraday points
+            return intradayData;
+        }
+
+        // Fallback to daily data for longer ranges
+        return filterDataByRange(data, range);
+    }, [data, intradayData, range])
 
     // Calculate stats from filtered data
     const startValue = filteredData.length > 0 ? filteredData[0].value : 0

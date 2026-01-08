@@ -140,26 +140,47 @@ export const parseBienPreterCsv = (csvText: string): CsvParserResult => {
         header: true,
         skipEmptyLines: true,
         delimiter: ';', // French CSVs often use semi-colon
+        transformHeader: (h) => h.trim().replace(/^"|"$/g, '').trim() // Clean quotes and spaces from headers
     });
+
+    // Helper to find column case-insensitive
+    const findKey = (row: Record<string, string>, target: string) => {
+        return Object.keys(row).find(k => k.toLowerCase().includes(target.toLowerCase()));
+    }
 
     parsed.data.forEach((row, index) => {
         // Required: "Projet" and "Montant"
-        if (!row['Projet'] || !row['Montant']) {
+        // Use fuzzy matching for critical columns
+        const projectKey = findKey(row, 'Projet');
+        const amountKey = findKey(row, 'Montant');
+
+        if (!projectKey || !amountKey || !row[projectKey] || !row[amountKey]) {
             // Only report error if row looks somewhat valid (not empty junk)
             if (Object.keys(row).length > 2) errors.push({ row: index, message: "Missing Projet or Montant" });
             return;
         }
 
-        const status = row['Statut'];
-        const rate = parseFrenchNumber(row['Taux']); // Interest rate (e.g., 15 for 15%)
-        const duration = parseFrenchNumber(row['Durée de remboursements (mois)']);
-        const projectName = row['Projet'];
-        const company = row['Entreprise'];
-        const amount = parseFrenchNumber(row['Montant']);
-        const netInterestTotal = parseFrenchNumber(row['Intérêts nets perçus']); // Cumulative total
-        const mensualite = parseFrenchNumber(row['Mensualité']); // Monthly payment (capital + interest)
-        const startDateStr = row['Date de financement']; // e.g., "17/12/2025"
-        const endDateStr = row['Date de clôture']; // e.g., "06/04/2026"
+        const project = row[projectKey];
+        const amount = parseFrenchNumber(row[amountKey]);
+
+        // Fuzzy match other columns
+        const statusKey = findKey(row, 'Statut');
+        const rateKey = findKey(row, 'Taux');
+        const durationKey = findKey(row, 'Durée');
+        const companyKey = findKey(row, 'Entreprise');
+        const netInterestKey = findKey(row, 'Intérêts nets');
+        const mensualiteKey = findKey(row, 'Mensualité');
+        const startDateKey = findKey(row, 'Date de financement');
+        const endDateKey = findKey(row, 'Date de clôture');
+
+        const status = statusKey ? row[statusKey] : '';
+        const rate = rateKey ? parseFrenchNumber(row[rateKey]) : 0;
+        const duration = durationKey ? parseFrenchNumber(row[durationKey]) : 0;
+        const company = companyKey ? row[companyKey] : '';
+        const netInterestTotal = netInterestKey ? parseFrenchNumber(row[netInterestKey]) : 0;
+        const mensualite = mensualiteKey ? parseFrenchNumber(row[mensualiteKey]) : 0;
+        const startDateStr = startDateKey ? row[startDateKey] : '';
+        const endDateStr = endDateKey ? row[endDateKey] : '';
 
         // Store all metadata as JSON in symbol field
         const metadata = JSON.stringify({
@@ -174,7 +195,7 @@ export const parseBienPreterCsv = (csvText: string): CsvParserResult => {
         });
 
         assets.push({
-            name: projectName,
+            name: project,
             symbol: metadata, // Store metadata as JSON in symbol field (temporary solution)
             quantity: 1,
             price: amount,

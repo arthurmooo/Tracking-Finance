@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from "@/db"
-import { assets, dailySnapshots, portfolios } from "@/db/schema"
+import { assets, dailySnapshots, intradaySnapshots, portfolios } from "@/db/schema"
 import { eq, isNotNull } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import YahooFinance from 'yahoo-finance2'
@@ -177,6 +177,26 @@ export async function updateAllPrices() {
                 });
                 console.log(`[Snapshot] Created for user ${userId}: ${totalNetWorth} EUR (Stocks: ${breakdown.stocks})`);
             }
+
+            // 5. Update Intraday Snapshot (Hourly)
+            // Always insert a new point for granular history
+            await db.insert(intradaySnapshots).values({
+                userId: userId,
+                timestamp: new Date(),
+                totalNetWorth: totalNetWorth.toString(),
+                currency: 'EUR',
+                data: breakdown
+            });
+            console.log(`[Intraday] Saved snapshot for user ${userId} at ${new Date().toISOString()}`);
+
+            // CLEANUP: Keep only last 30 days of intraday data to prevent bloat
+            // const thirtyDaysAgo = new Date();
+            // thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            // await db.delete(intradaySnapshots)
+            //     .where(and(
+            //         eq(intradaySnapshots.userId, userId),
+            //         lt(intradaySnapshots.timestamp, thirtyDaysAgo)
+            //     ));
         }
 
         revalidatePath('/portfolio');

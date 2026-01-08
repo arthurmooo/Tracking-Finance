@@ -121,7 +121,7 @@ export const ISIN_TO_REGION: Record<string, string> = {
     'FR0007052782': 'Europe', // CAC 40
     'FR0000120271': 'Europe', // TOTALENERGIES
     'FR0000121972': 'Europe', // SCHNEIDER
-    'FR0000120578': 'Healthcare', // SANOFI (mapped in sector, region is Europe)
+    'FR0000120578': 'Europe', // SANOFI (sector is Healthcare, but region is Europe)
     'FR0000121014': 'Europe', // LVMH
     'FR0000120073': 'Europe', // AIR LIQUIDE
 }

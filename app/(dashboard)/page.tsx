@@ -94,12 +94,21 @@ export default async function DashboardPage() {
                 </Card>
             </div>
 
+            {/* Merge intraday + daily snapshots for richer chart */}
             <DashboardCharts
-                snapshots={data.snapshots.map(s => ({
-                    date: s.date,
-                    netWorth: parseFloat(s.totalNetWorth)
-                }))}
-                assets={data.assets.map(a => ({
+                snapshots={[
+                    // Daily snapshots (older history)
+                    ...data.snapshots.map((s: any) => ({
+                        date: s.date,
+                        netWorth: parseFloat(s.totalNetWorth)
+                    })),
+                    // Intraday snapshots (recent granular data)
+                    ...(data.intradaySnapshots || []).map((s: any) => ({
+                        date: s.timestamp ? new Date(s.timestamp).toISOString() : new Date().toISOString(),
+                        netWorth: parseFloat(s.totalNetWorth)
+                    }))
+                ]}
+                assets={data.assets.map((a: any) => ({
                     name: a.name,
                     type: a.type,
                     value: parseFloat(a.quantity) * (parseFloat(a.currentPrice || '0'))
